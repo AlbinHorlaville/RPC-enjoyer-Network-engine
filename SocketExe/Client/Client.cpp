@@ -3,6 +3,8 @@
 //
 
 #include <iostream>
+#include <cstring>
+#include <cstdlib>
 
 #include "Socket.h"
 
