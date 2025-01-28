@@ -69,5 +69,5 @@ int main(int argc, char *argv[]){
 
     Socket::close(sockfd);
     Socket::cleanup();
-    return 0;
+    return 1;
 }
