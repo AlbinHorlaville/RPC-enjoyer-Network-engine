@@ -31,10 +31,10 @@ public:
       static int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 
       // Send a message on the socket.
-      static ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
+      static ssize_t sendTo(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
 
       // Receive a message from the socket.
-      static ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
+      static ssize_t recvFrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
 
       // Close a file descriptor.
       static int close(int fd);
