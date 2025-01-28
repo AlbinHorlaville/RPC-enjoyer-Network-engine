@@ -1,11 +1,13 @@
-name: learn-github-actions
-on: [push]
+name: Build and Test Engine
+run-name: ${{ github.ref }} on ${{ github.repository }} is being built and tested out Github actions
+on: [ push ]
 jobs:
-  check-bats-version:
+  Build-Engine:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: "Create build directory and run CMake"
-        run: cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
-      - name: "Build Project" 
-        run: cmake --build build --target all --config Release -- -j4 
+      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
+      - name: Check out the repository code
+        uses: actions/checkout@v4
+      - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
+      - name: Check repository
+        run: ls ${{ github.workspace }}
