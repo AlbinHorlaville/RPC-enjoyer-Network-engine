@@ -1,13 +1,12 @@
 cmake_minimum_required(VERSION 3.29)
-project(SocketExe)
+project(Client)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(SocketExe Client.cpp)
+#add_subdirectory(../Socket ${CMAKE_BINARY_DIR}/Socket_Client)
 
-target_link_libraries(SocketExe PUBLIC Socket)
-target_include_directories(SocketExe PUBLIC
-        "${PROJECT_BINARY_DIR}"
-        "../Socket"
-)
+add_executable(Client Client.cpp)
+
+target_link_libraries(Client Socket)
+target_include_directories(Client PRIVATE ${CMAKE_SOURCE_DIR}/Socket)
 

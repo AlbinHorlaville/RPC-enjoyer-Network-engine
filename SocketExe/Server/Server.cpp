@@ -52,7 +52,7 @@ int main(int argc, char *argv[]){
       sockfd,
       (const char *)buffer,
       strlen(buffer),
-      MSG_SEND,
+      SD_SEND,
       (const struct sockaddr *)&cliaddr,
       sizeof(servaddr));
 

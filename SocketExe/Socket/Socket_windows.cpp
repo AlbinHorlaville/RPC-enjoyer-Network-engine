@@ -3,11 +3,12 @@
 //
 
 #include "Socket.h"
+#include <iostream>
 
 void Socket::initialize() {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr < "WSAStartup failed" << std::endl;
+        std::cerr << "WSAStartup failed" << std::endl;
         exit(1);
     }
 }

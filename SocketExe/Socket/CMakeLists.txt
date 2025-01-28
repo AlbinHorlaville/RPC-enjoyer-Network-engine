@@ -14,4 +14,6 @@ elseif (UNIX)
     list(APPEND SOURCES Socket_posix.cpp)
 endif ()
 
-add_library(Socket ${SOURCES})
+add_library(Socket STATIC ${SOURCES})
+
+target_include_directories(Socket PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
