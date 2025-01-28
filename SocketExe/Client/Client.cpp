@@ -18,10 +18,15 @@ int main(int argc, char *argv[]){
   char bufferReceive[MAXLINE];
   struct sockaddr_in servaddr, cliaddr;
 
-  std::cout << "Enter Server IP Address: ";
-  std::cin >> addr;
-  std::cout << "Enter message to send: ";
-  std::cin >> bufferSend;
+  if (argc == 3) {
+    strcpy(addr, argv[1]); // IP adress
+    strcpy(bufferSend, argv[2]); // Message
+  }else {
+    std::cout << "Enter Server IP Address: ";
+    std::cin >> addr;
+    std::cout << "Enter message to send: ";
+    std::cin >> bufferSend;
+  }
 
   if ((sockfd = Socket::socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
     perror("Socket creation failed");
@@ -47,7 +52,7 @@ int main(int argc, char *argv[]){
     (const struct sockaddr *)&servaddr,
     sizeof(servaddr));
 
-  std::cout << "Message sent to the server." << std::endl;
+  std::cout << "Message sent to the server: " << bufferSend << std::endl;
 
   n = Socket::recvfrom(sockfd, (char *)bufferReceive, MAXLINE, 0,(struct sockaddr *)&cliaddr, &len);
   if (n < 0) {
@@ -57,9 +62,13 @@ int main(int argc, char *argv[]){
   }
 
   bufferReceive[n] = '\0';
-  std::cout << "Server: " << bufferReceive << std::endl;
+  std::cout << "Message received from the server: " << bufferReceive << std::endl;
 
   Socket::close(sockfd);
   Socket::cleanup();
+
+  if (strcmp(bufferSend, bufferReceive) == 0) {
+    return 1;
+  }
   return 0;
   }

@@ -53,7 +53,7 @@ int main(int argc, char *argv[]){
     }
 
     buffer[n] = '\0';
-    std::cout << "Client: " << buffer << std::endl;
+    std::cout << "Message received from the client: " << buffer << std::endl;
 
     Socket::sendto(
       sockfd,
