@@ -9,4 +9,8 @@ jobs:
       - name: Check out the repository code
         uses: actions/checkout@v4
       - name: setup library
-        run: /bin/bash ./scripts/pre-installer/linux/debian/preinstaller.sh 
+        run: /bin/bash ./scripts/pre-installer/linux/debian/preinstaller.sh
+      - name: build project with test for static lib
+        run: cmake -S ./ -B ./build -DRUN_TEST=1 -DBUILD_SHARED_LIBS=0 && cmake --build ./build 
+      - name: run test
+        run: build/out/engine_test --gtest_output="xml:build/test-results.xml"
