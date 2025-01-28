@@ -16,7 +16,7 @@ int main(int argc, char *argv[]){
   char addr[20];
   char bufferSend[MAXLINE];
   char bufferReceive[MAXLINE];
-  struct sockaddr_in servaddr;
+  struct sockaddr_in servaddr, cliaddr;
 
   std::cout << "Enter Server IP Address: ";
   std::cin >> addr;
@@ -29,6 +29,7 @@ int main(int argc, char *argv[]){
   }
 
   memset(&servaddr, 0, sizeof(servaddr));
+  memset(&cliaddr, 0, sizeof(cliaddr));
 
   // Filling server information
   servaddr.sin_family = AF_INET;
@@ -36,21 +37,27 @@ int main(int argc, char *argv[]){
   servaddr.sin_addr.s_addr = inet_addr(addr);
 
   int n;
-  socklen_t len;
+  socklen_t len = sizeof(cliaddr);
 
   Socket::sendto(
     sockfd,
     (const char *)bufferSend,
     strlen(bufferSend),
-    SD_SEND,
+    0,
     (const struct sockaddr *)&servaddr,
     sizeof(servaddr));
 
   std::cout << "Message sent to the server." << std::endl;
 
-  n = Socket::recvfrom(sockfd, (char *)bufferReceive, MAXLINE, MSG_WAITALL,(struct sockaddr *)&servaddr, &len);
+  n = Socket::recvfrom(sockfd, (char *)bufferReceive, MAXLINE, 0,(struct sockaddr *)&cliaddr, &len);
+  if (n < 0) {
+    Socket::close(sockfd);
+    Socket::cleanup();
+    exit(EXIT_FAILURE);
+  }
+
   bufferReceive[n] = '\0';
-  std::cout << "Server : " << bufferReceive << std::endl;
+  std::cout << "Server: " << bufferReceive << std::endl;
 
   Socket::close(sockfd);
   Socket::cleanup();

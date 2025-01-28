@@ -18,7 +18,13 @@ ssize_t Socket::sendto(int sockfd, const void *buf, size_t len, int flags, const
 }
 
 ssize_t Socket::recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen) {
-    return ::recvfrom(sockfd, (char *)buf, (int)len, flags, src_addr, (int *)addrlen);
+    int received = ::recvfrom(sockfd, (char *)buf, (int)len, flags, src_addr, (int *)addrlen);
+    if (received == SOCKET_ERROR) {
+        int error_code = WSAGetLastError();
+        std::cerr << "recvfrom failed. Error code: " << error_code << std::endl;
+        return -1; // Explicit failure
+    }
+    return received;
 }
 
 int Socket::close(int fd) {

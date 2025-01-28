@@ -40,21 +40,28 @@ int main(int argc, char *argv[]){
     }
 
     int n;
-    socklen_t len;
+    socklen_t len = sizeof(cliaddr);
 
-    len = sizeof(cliaddr); // len is value/result
+    memset(&cliaddr, 0, sizeof(cliaddr));
 
-    n = Socket::recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL,(struct sockaddr *)&cliaddr, &len);
+    std::cout << "Waiting for message..." << std::endl;
+    n = Socket::recvfrom(sockfd, (char *)buffer, MAXLINE, 0,(struct sockaddr *)&cliaddr, &len);
+    if (n < 0) {
+        Socket::close(sockfd);
+        Socket::cleanup();
+        exit(EXIT_FAILURE);
+    }
+
     buffer[n] = '\0';
-    std::cout << "Client : " << buffer << std::endl;
+    std::cout << "Client: " << buffer << std::endl;
 
     Socket::sendto(
       sockfd,
       (const char *)buffer,
       strlen(buffer),
-      SD_SEND,
+      0,
       (const struct sockaddr *)&cliaddr,
-      sizeof(servaddr));
+      len);
 
     std::cout << "Message sent to the client." << std::endl;
 
