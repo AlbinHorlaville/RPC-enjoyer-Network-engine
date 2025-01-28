@@ -46,7 +46,7 @@ int main(int argc, char *argv[]){
   int n;
   socklen_t len = sizeof(cliaddr);
 
-  Socket::sendto(
+  Socket::sendTo(
     sockfd,
     (const char *)bufferSend,
     strlen(bufferSend),
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]){
 
   std::cout << "Message sent to the server: " << bufferSend << std::endl;
 
-  n = Socket::recvfrom(sockfd, (char *)bufferReceive, MAXLINE, 0,(struct sockaddr *)&cliaddr, &len);
+  n = Socket::recvFrom(sockfd, (char *)bufferReceive, MAXLINE, 0,(struct sockaddr *)&cliaddr, &len);
   if (n < 0) {
     Socket::close(sockfd);
     Socket::cleanup();

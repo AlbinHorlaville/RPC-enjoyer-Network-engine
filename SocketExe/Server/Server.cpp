@@ -47,7 +47,7 @@ int main(int argc, char *argv[]){
     memset(&cliaddr, 0, sizeof(cliaddr));
 
     std::cout << "Waiting for message..." << std::endl;
-    n = Socket::recvfrom(sockfd, (char *)buffer, MAXLINE, 0,(struct sockaddr *)&cliaddr, &len);
+    n = Socket::recvFrom(sockfd, (char *)buffer, MAXLINE, 0,(struct sockaddr *)&cliaddr, &len);
     if (n < 0) {
         Socket::close(sockfd);
         Socket::cleanup();
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]){
     buffer[n] = '\0';
     std::cout << "Message received from the client: " << buffer << std::endl;
 
-    Socket::sendto(
+    Socket::sendTo(
       sockfd,
       (const char *)buffer,
       strlen(buffer),
