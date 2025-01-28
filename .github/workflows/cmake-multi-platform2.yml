@@ -8,6 +8,5 @@ jobs:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
       - name: Check out the repository code
         uses: actions/checkout@v4
-      - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
-      - name: Check repository
-        run: ls ${{ github.workspace }}
+      - name: setup library
+        run: /bin/bash ./scripts/pre-installer/linux/debian/preinstaller.sh 
