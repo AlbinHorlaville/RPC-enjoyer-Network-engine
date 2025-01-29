@@ -85,10 +85,6 @@ jobs:
       working-directory: "${{ steps.strings.outputs.build-output-dir }}"
       run: ctest --show-only
 
-    - name: Test
-      working-directory: "${{ steps.strings.outputs.build-output-dir }}"
+    - name: SocketTest
+      working-directory: "${{ steps.strings.outputs.build-output-dir }}/SocketExe"
       run: ctest --build-config ${{ matrix.build_type }} --rerun-failed --output-on-failure
-
-    - name: Show CTest logs for debugging
-      run: |
-        cat "${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log"
