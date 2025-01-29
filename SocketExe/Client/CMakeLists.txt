@@ -3,8 +3,6 @@ project(Client)
 
 set(CMAKE_CXX_STANDARD 20)
 
-#add_subdirectory(../Socket ${CMAKE_BINARY_DIR}/Socket_Client)
-
 add_executable(Client Client.cpp)
 
 target_link_libraries(Client Socket)

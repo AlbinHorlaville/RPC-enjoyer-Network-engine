@@ -3,8 +3,6 @@ project(Server)
 
 set(CMAKE_CXX_STANDARD 20)
 
-#add_subdirectory(../Socket ${CMAKE_BINARY_DIR}/Socket_Server)
-
 add_executable(Server Server.cpp)
 
 target_link_libraries(Server Socket)

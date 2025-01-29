@@ -12,4 +12,7 @@ if(WIN32)
 endif()
 
 enable_testing()
-add_test(NAME SocketTest COMMAND ${CMAKE_COMMAND} -E env "SERVER_EXECUTABLE=$<TARGET_FILE:Server>" "CLIENT_EXECUTABLE=$<TARGET_FILE:Client>" ${CMAKE_SOURCE_DIR}/run_test.sh)
+add_test(NAME SocketTest COMMAND bash ${CMAKE_SOURCE_DIR}/run_test.sh)
+set_tests_properties(SocketTest PROPERTIES ENVIRONMENT
+        "SERVER_EXECUTABLE=$<TARGET_FILE:Server>;CLIENT_EXECUTABLE=$<TARGET_FILE:Client>"
+)

@@ -55,6 +55,7 @@ int main(int argc, char *argv[]){
     sizeof(servaddr));
 
   std::cout << "Message sent to the server: " << bufferSend << std::endl;
+  std::cout << "Waiting for an answer..." << std::endl;
 
   n = Socket::recvFrom(sockfd, (char *)bufferReceive, MAXLINE, 0,(struct sockaddr *)&cliaddr, &len);
   if (n < 0) {

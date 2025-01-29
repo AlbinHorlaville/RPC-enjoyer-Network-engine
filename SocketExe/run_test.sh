@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Variables (passées par CMake)
-SERVER_EXECUTABLE=$SERVER_EXECUTABLE
-CLIENT_EXECUTABLE=$CLIENT_EXECUTABLE
+SERVER_EXECUTABLE=$(cygpath -u "$SERVER_EXECUTABLE")
+CLIENT_EXECUTABLE=$(cygpath -u "$CLIENT_EXECUTABLE")
 
 # Vérifie si les exécutables existent et sont exécutables
 if [ ! -x "$SERVER_EXECUTABLE" ]; then
@@ -17,7 +17,7 @@ fi
 
 # Lancer le serveur en arrière-plan
 echo "Starting server..."
-$SERVER_EXECUTABLE &
+$SERVER_EXECUTABLE &  > server.log 2>&1 &
 SERVER_PID=$!
 
 # Vérifie si le serveur s'est lancé correctement
@@ -26,17 +26,22 @@ if ! kill -0 $SERVER_PID 2>/dev/null; then
     exit 1
 fi
 
-# Attends un court instant pour s'assurer que le serveur est prêt
-sleep 2
+# Attend un court instant pour s'assurer que le serveur est prêt
+wait $SERVER_PID 2>/dev/null
 
 # Lance le client
 echo "Starting client..."
-$CLIENT_EXECUTABLE "127.0.0.1" "Albin"
+$CLIENT_EXECUTABLE "127.0.0.1" "Albin" > client.log 2>&1
 CLIENT_RESULT=$?
 
 # Arrête proprement le serveur
 echo "Stopping server..."
-kill $SERVER_PID
+
+if kill -0 $SERVER_PID 2>/dev/null; then
+    kill $SERVER_PID
+    wait $SERVER_PID 2>/dev/null
+fi
+
 wait $SERVER_PID 2>/dev/null
 
 # Vérifie le résultat du client
