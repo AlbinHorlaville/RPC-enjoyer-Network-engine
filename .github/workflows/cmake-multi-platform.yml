@@ -48,41 +48,32 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set reusable strings
+      id: strings
       shell: bash
       run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        if [[ "$RUNNER_OS" == "Linux" ]]; then
+          echo "build-output-dir=${{ github.workspace }}/build-linux" >> "$GITHUB_OUTPUT"
+        elif [[ "$RUNNER_OS" == "Windows" ]]; then
+          echo "build-output-dir=${{ github.workspace }}\\build-windows" >> "$GITHUB_OUTPUT"
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+          echo "build-output-dir=${{ github.workspace }}/build-macos" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Configure CMake
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      run: |
+        cmake -B "${{ steps.strings.outputs.build-output-dir }}" \
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
         -S ${{ github.workspace }}
 
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+      run: cmake --build "${{ steps.strings.outputs.build-output-dir }}" --config ${{ matrix.build_type }}
 
     - name: List CTest Tests
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      working-directory: "${{ steps.strings.outputs.build-output-dir }}"
       run: ctest --show-only
 
-    - name: Install Git Bash (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        choco install git
-
-    - name: Add Bash to PATH (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        echo "Adding Git Bash to PATH"
-        echo "C:/Program Files/Git/bin" >> $GITHUB_PATH
-
     - name: Test
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: |
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          "C:/Program Files/Git/bin/bash.exe" -c "ctest --build-config ${{ matrix.build_type }}"
-        else
-          ctest --build-config ${{ matrix.build_type }}
-        fi
+      working-directory: "${{ steps.strings.outputs.build-output-dir }}"
+      run: ctest --build-config ${{ matrix.build_type }}
