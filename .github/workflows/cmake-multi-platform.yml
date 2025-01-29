@@ -59,13 +59,24 @@ jobs:
           echo "build-output-dir=${{ github.workspace }}/build-macos" >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Configure CMake on Windows
+      if: runner.os == 'Windows'
+      shell: cmd
+      run: |
+        cmake -B "%GITHUB_WORKSPACE%\\build-windows" ^
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} ^
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} ^
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ^
+        -S "%GITHUB_WORKSPACE%"
+
     - name: Configure CMake
+      if: runner.os != 'Windows'
       run: |
         cmake -B "${{ steps.strings.outputs.build-output-dir }}" \
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-        -S "${{ github.workspace }}"  # Correct source directory for all platforms
+        -S "${{ github.workspace }}"
 
     - name: Build
       run: cmake --build "${{ steps.strings.outputs.build-output-dir }}" --config ${{ matrix.build_type }}
@@ -76,8 +87,8 @@ jobs:
 
     - name: Test
       working-directory: "${{ steps.strings.outputs.build-output-dir }}"
-      run: ctest --build-config ${{ matrix.build_type }}
+      run: ctest --build-config ${{ matrix.build_type }} --rerun-failed --output-on-failure
 
     - name: Show CTest logs for debugging
       run: |
-        cat "${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log"  # Display test logs to help debug
+        cat "${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log"
