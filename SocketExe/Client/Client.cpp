@@ -69,8 +69,5 @@ int main(int argc, char *argv[]){
   Socket::close(sockfd);
   Socket::cleanup();
 
-  if (strcmp(bufferSend, bufferReceive) == 0) {
-    return 1;
-  }
-  return 0;
+  return strcmp(bufferSend, bufferReceive) == 0;
   }
