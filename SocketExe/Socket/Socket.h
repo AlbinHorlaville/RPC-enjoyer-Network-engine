@@ -5,6 +5,9 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
+#include <iostream>
+#include <span>
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -23,24 +26,38 @@ public:
       // Platform-independent socket initialization
       static void initialize();
 
-      // Creates an unbound socket in the specified domain.
+      // Bind the socket to an adress
       // Return socket file descriptor.
-      static int socket(int domain, int type, int protocol);
+      static int listen(const std::string& endpoint, uint16_t port);
 
-      // Assigns address to the unbound socket.
-      static int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+      // Bind the socket to an adress
+      // Return socket file descriptor.
+      static int connect(const std::string& serverIp, uint16_t port);
 
       // Send a message on the socket.
-      static long sendTo(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
+      static long sendTo(int sockfd, const std::string &to, uint16_t port, std::span<const char> message);
 
       // Receive a message from the socket.
-      static long recvFrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
+      static long recvFrom(int sockfd, std::string &from, std::span<char, 65535> message);
 
       // Close a file descriptor.
       static int close(int fd);
 
       // Clean the library
       static void cleanup();
+
+private:
+      // Creates an unbound socket in the specified domain.
+      // Fill AF_INET for IPv4 or AF_INET6 for IPv6 as argument.
+      // Return socket file descriptor.
+      static int socket(int domain);
+
+      // Assigns address to the unbound socket.
+      static int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+
+      static std::string IpToString(const sockaddr* sa);
+
+      static sockaddr StringToIp(const std::string& ip, uint16_t port);
 };
 
 #endif //SOCKET_H

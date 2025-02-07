@@ -11,7 +11,8 @@
 
 #include "Socket.h"
 
-#define PORT 5555
+#define PORT_SEND 5556
+#define PORT_RECEIVE 5555
 #define MAXLINE 1024
 
 int main(int argc, char *argv[]){
@@ -19,51 +20,42 @@ int main(int argc, char *argv[]){
 
     int sockfd;
     char addr[20];
-    char buffer[MAXLINE];
     struct sockaddr_in servaddr, cliaddr;
 
-    if ((sockfd = Socket::socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+    if ((sockfd = Socket::listen("127.0.0.1", PORT_RECEIVE)) < 0) {
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
 
-    memset(&servaddr, 0, sizeof(servaddr));
-    memset(&cliaddr, 0, sizeof(cliaddr));
 
-    // Filling server information
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(PORT);
-    servaddr.sin_addr.s_addr = INADDR_ANY;
-
-    // Bind the socket with the server address
-    if (Socket::bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
-      perror("Bind failed");
-      exit(EXIT_FAILURE);
-    }
-
-    int n;
     socklen_t len = sizeof(cliaddr);
 
     memset(&cliaddr, 0, sizeof(cliaddr));
 
     std::cout << "Waiting for message..." << std::endl;
-    n = Socket::recvFrom(sockfd, (char *)buffer, MAXLINE, 0,(struct sockaddr *)&cliaddr, &len);
-    if (n < 0) {
+    std::string from_ip;
+    from_ip.resize(255);
+    std::array<char, 65535> buffer;
+    ssize_t read_bytes;
+    read_bytes = Socket::recvFrom(sockfd, from_ip, buffer);
+    if (read_bytes < 0) {
         Socket::close(sockfd);
         Socket::cleanup();
         exit(EXIT_FAILURE);
     }
 
-    buffer[n] = '\0';
-    std::cout << "Message received from the client: " << buffer << std::endl;
+    buffer[read_bytes] = '\0';
+    std::cout << "Message received from the client: " << buffer.data() << std::endl;
 
-    Socket::sendTo(
-      sockfd,
-      (const char *)buffer,
-      strlen(buffer),
-      0,
-      (const struct sockaddr *)&cliaddr,
-      len);
+    uint16_t port = 0;
+    auto pos = from_ip.find_last_of (':');
+    std::string ip;
+    if (pos != std::string::npos) {
+        ip = from_ip.substr (0,pos);
+        std::string port_str = from_ip.substr (++pos);
+        port = atoi(port_str.c_str());
+    }
+    Socket::sendTo(sockfd, ip, port, std::span {buffer.data(), static_cast<unsigned long>(read_bytes)});
 
     std::cout << "Message sent to the client." << std::endl;
 

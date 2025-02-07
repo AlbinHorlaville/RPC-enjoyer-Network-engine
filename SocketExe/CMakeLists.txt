@@ -3,6 +3,7 @@ project(SocketExe)
 
 set(CMAKE_CXX_STANDARD 20)
 
+add_subdirectory(externals)
 add_subdirectory(Socket)
 add_subdirectory(Client)
 add_subdirectory(Server)
@@ -10,6 +11,8 @@ add_subdirectory(Server)
 if(WIN32)
     target_link_libraries(Socket PRIVATE ws2_32)
 endif()
+
+target_link_libraries(Socket PUBLIC fmt::fmt-header-only)
 
 enable_testing()
 add_test(NAME SocketTest COMMAND bash ${CMAKE_SOURCE_DIR}/SocketExe/run_test.sh)

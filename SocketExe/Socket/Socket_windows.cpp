@@ -13,18 +13,30 @@ void Socket::initialize() {
     }
 }
 
-long Socket::sendTo(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen) {
-    return sendto(sockfd, (const char*)buf, (int)len, flags, dest_addr, (int)addrlen);
+long Socket::sendTo(int sockfd, const std::string &to, uint16_t port, std::span<const char> message) {
+    const sockaddr destination = StringToIp(to, port);
+    ssize_t error = sendto(sockfd,
+        message.data(),
+        message.size(),
+        0,
+        &destination,
+        sizeof(destination));
+    return error;
 }
 
-long Socket::recvFrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen) {
-    int received = recvfrom(sockfd, (char *)buf, (int)len, flags, src_addr, (int *)addrlen);
-    if (received == SOCKET_ERROR) {
-        int error_code = WSAGetLastError();
-        std::cerr << "recvfrom failed. Error code: " << error_code << std::endl;
-        return -1; // Explicit failure
-    }
-    return received;
+long Socket::recvFrom(int sockfd, std::string &from, std::span<char, 65535> message) {
+    struct sockaddr_storage peer_addr;
+    socklen_t peer_addr_len = sizeof(struct sockaddr_storage);
+    const ssize_t read_bytes = recvfrom(sockfd,
+        message.data(),
+        message.size_bytes(),
+        0,
+        reinterpret_cast<sockaddr*>(&peer_addr),
+        &peer_addr_len);
+
+    from = IpToString(reinterpret_cast<const sockaddr*>(&peer_addr));
+
+    return read_bytes;
 }
 
 int Socket::close(int fd) {
