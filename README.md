@@ -1,7 +1,12 @@
 # RPC-enjoyer-Network-engine
 
-First practice :
-- The library Socket
-- Executable SocketExe
+Project by Albin Horlaville and Hugo Girard.
 
-Project by Albin Horlaville and Hugo Girard
+The first release is available. It is a C++ library that compiles on (almost) every OS and compiler !
+
+## University
+Université du Québec à Chicoutimi
+## Course
+Network Programming in Video Games
+## Teacher
+Valère Plantevin
