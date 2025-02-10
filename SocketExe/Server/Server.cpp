@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cstring>
 #include <cstdlib>
+#include <array>
 
 #include "Socket.h"
 
