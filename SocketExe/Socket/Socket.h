@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <span>
+#include <cstdint>
 
 #ifdef _WIN32
 #include <winsock2.h>

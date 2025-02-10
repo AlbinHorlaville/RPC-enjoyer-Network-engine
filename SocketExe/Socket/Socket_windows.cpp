@@ -65,8 +65,13 @@ long Socket::sendTo(int sockfd, const std::string &to, uint16_t port, std::span<
         message.data(),
         message.size(),
         0,
-        &destination,
+        reinterpret_cast<const sockaddr*>(&destination),
         sizeof(destination));
+
+    if (error == SOCKET_ERROR) {
+        std::cerr << "sendto failed with error: " << WSAGetLastError() << std::endl;
+    }
+
     return error;
 }
 
@@ -81,6 +86,11 @@ long Socket::recvFrom(int sockfd, std::string &from, std::span<char, 65535> mess
         &peer_addr_len);
 
     from = IpToString(reinterpret_cast<const sockaddr*>(&peer_addr));
+
+    if (read_bytes == SOCKET_ERROR) {
+        std::cerr << "recvfrom failed with error: " << WSAGetLastError() << std::endl;
+        return -1;
+    }
 
     return read_bytes;
 }
