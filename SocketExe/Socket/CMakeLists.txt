@@ -3,8 +3,6 @@ project(Socket)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(SOURCES Socket_common.cpp)
-
 #include platform-specific source files
 if(WIN32)
     list(APPEND SOURCES Socket_windows.cpp)
