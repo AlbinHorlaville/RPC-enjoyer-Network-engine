@@ -48,7 +48,7 @@ int main(int argc, char *argv[]){
   std::string from_ip;
   from_ip.resize(255);
   std::array<char, 65535> bufferReceive;
-  ssize_t read_bytes;
+  long long read_bytes;
   read_bytes = Socket::recvFrom(sockfd, from_ip, bufferReceive);
   if (read_bytes < 0) {
     Socket::close(sockfd);
