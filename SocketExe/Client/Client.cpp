@@ -25,7 +25,7 @@ int main(int argc, char *argv[]){
     strcpy(addr, argv[1]); // IP adress
     strcpy(bufferSend, argv[2]); // Message
   }else {
-    std::cout << "Enter Server IP Address: ";
+    std::cout << "Enter ServerV2 IP Address: ";
     std::cin >> addr;
     std::cout << "Enter message to send: ";
     std::cin >> bufferSend;
