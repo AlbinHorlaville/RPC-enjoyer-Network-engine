@@ -14,6 +14,14 @@ Stream::Stream(uint16_t id, bool reliable, int sockfd, std::string ip, uint16_t 
   this->onDataReceivedHandler = std::move(handler);
 }
 
+bool Stream::isReliable() {
+  return this->reliable;
+}
+
+uint16_t Stream::getId() {
+  return this->id;
+}
+
 long Stream::SendData(std::span<const char> Data){
   long size = Socket::sendTo(this->sockfd, this->ip, this->port, Data);
   return size;

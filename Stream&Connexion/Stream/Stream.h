@@ -24,6 +24,8 @@ class Stream {
         Stream(uint16_t id, bool reliable, int sockfd, std::string ip, uint16_t port, std::function<void(std::span<const char>)> handler);
         long SendData(std::span<const char> Data);
         long ReceiveData(std::span<char, 65535> buffer);
+        bool isReliable();
+        uint16_t getId();
         void OnDataReceived(std::span<const char> Data);
         void Close();
 };

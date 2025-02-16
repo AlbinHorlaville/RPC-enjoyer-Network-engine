@@ -9,21 +9,37 @@
 #include <functional>
 
 class Stream;
+class Timer;
 
 class Client {
     // un timer qui envoie des pings toutes les 200ms
     // un timer qui call OnDisconnect en arrivant à 0s sauf s'il est reset avant
   private:
     Stream *stream;
+    Timer *timerPing;
+    Timer *timerDisconnect;
+    Timer *timerReconnect;
+    Timer *timerStopReconnect;
+    uint64_t ping_id;
+    uint64_t uuid;
+    uint64_t msg_id;
+    int sockfd;
+    std::string ip_server;
+    uint16_t port_server;
+    std::string version;
 public:
     Client();
 
     void ConnectTo(const std::string& ip, uint16_t port);
     void OnConnectionEvent(std::function<void(bool, uint64_t)> handler); //Here the bool represent the success of the connection
-    void OnDisconnect(std::function<void> handler);
-    void Ping() const;
+    void SendData(std::string const& text);
+    void ReceiveData();
+    void OnDisconnect();
+    void Disconnect();
+    void Reconnect();
+    void CloseConnexion();
+    void Ping();
     std::unique_ptr<Stream> CreateStream(bool reliable);
-    std::unique_ptr<Stream> OnCreateStream(std::function<void(bool, uint64_t)> handler);
 };
 
 
