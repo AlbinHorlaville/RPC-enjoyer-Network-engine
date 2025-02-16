@@ -5,7 +5,7 @@
 #ifndef FORMATPACKAGE_H
 #define FORMATPACKAGE_H
 
-#include <string>
+#include <cstring>
 #include <cstdint>
 #include <span>
 #include <vector>

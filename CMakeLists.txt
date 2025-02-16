@@ -6,4 +6,4 @@ set(CMAKE_CXX_STANDARD 20)
 enable_testing()
 
 add_subdirectory(SocketExe)
-add_subdirectory(Stream&Connexion)
+add_subdirectory(StreamAndConnexion)

@@ -89,22 +89,27 @@ void Server::Receive() {
 
     switch (bufferReceive[0]) {
         case 3: // DISCONNECT
+        {
             struct Disconnect disconnect{};
             disconnect.deserialize(bufferReceive);
             OnClientDisconnected(disconnect.uuid);
             Listen();
             break;
+        }
         case 5: // PONG
+        {
             // Deserialize Package
             struct Ping pong{};
             pong.deserialize(bufferReceive);
             ClientInfo pongClient = clients[pong.uuid];
             pongClient.timer->stop();
-            auto function = [=] () { OnClientDisconnected(pong.uuid);};
+            auto function = [this, pong] () { OnClientDisconnected(pong.uuid);};
             pongClient.timer->setTimeout(function,1000);
             Pong(pong.uuid, pong.ping_id);
             break;
+        }
         case 6: // DATA
+        {
             // Deserialize Package
             struct Data data;
             data.deserialize(bufferReceive);
@@ -122,13 +127,16 @@ void Server::Receive() {
             bufferSend = data_ack.serialize();
             clients[data.uuid].stream->SendData(bufferSend);
             break;
+        }
         case 7: // DATA ACK
+        {
             // Deserialize Package
             struct Data_ACK ack{};
             ack.deserialize(bufferReceive);
             std::cout << "DATA_ACK received : " << ack.last_rcv_id << std::endl;
             // A finir : Faire un suivi des messages envoyer pour que l'ack ait un intérêt.
             break;
+        }
         default:
             // Never happen
             break;
