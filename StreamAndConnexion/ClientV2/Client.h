@@ -7,10 +7,8 @@
 
 #include <cstdint>
 #include <functional>
-#include <memory>
-
-class Stream;
-class Timer;
+#include "Timer.h"
+#include "Stream.h"
 
 class Client {
     // un timer qui envoie des pings toutes les 200ms
