@@ -33,6 +33,8 @@ uint16_t generateRandomPort() {
 
 Server::Server() : connectionSockfd(0), msg_id(0){}
 
+Server::~Server() {}
+
 void Server::Listen() {
     Socket::initialize();
     connectionSockfd = Socket::listen("127.0.0.1", PORT_CONNECT);
