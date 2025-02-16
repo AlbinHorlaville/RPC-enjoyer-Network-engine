@@ -7,13 +7,11 @@
 #include "Timer.h"
 #include "Stream.h"
 #include "Socket.h"
+#include <memory>
+
+#define DEFAULT_SERVER_PORT 5555
 
 Client::Client() {
-  stream = nullptr;
-  timerPing = nullptr;
-  timerDisconnect = nullptr;
-  timerReconnect = nullptr;
-  timerStopReconnect = nullptr;
   ping_id = 0;
   uuid = 0;
   token = 0;
@@ -25,16 +23,16 @@ Client::Client() {
   latence = 0;
 }
 
-void Client::ConnectTo(const std::string& ip, uint16_t port){
+void Client::ConnectTo(const std::string& ip){
   Socket::initialize();
-  sockfd = Socket::connect(ip, port);
+  sockfd = Socket::connect(ip, DEFAULT_SERVER_PORT);
 
   // Send the package CONNECT
   struct Connect package;
   package.version = version;
   package.size = sizeof(Connect);
   std::vector<char> Data = package.serialize();
-  Socket::sendTo(sockfd, ip_server, port_server, Data);
+  Socket::sendTo(sockfd, ip_server, DEFAULT_SERVER_PORT, Data);
 }
 
 void Client::SendData(std::string const& data) {
@@ -68,11 +66,9 @@ void Client::ReceiveData() {
       CreateStream(false);
 
       // Start the PING timer
-      timerPing = new Timer();
       timerPing->setInterval(Ping, 200);
 
       // Start the DISCONNECT timer
-      timerDisconnect = new Timer();
       timerDisconnect->setTimeout(OnDisconnect, 1000);
       break;
     case 5: // PONG
@@ -119,10 +115,10 @@ void Client::ReceiveData() {
 }
 
 void Client::OnDisconnect() {
+  stream->Close();
   timerPing->stop();
-  timerReconnect = new Timer();
+  timerDisconnect->stop();
   timerReconnect->setInterval(Reconnect, 1000);
-  timerStopReconnect = new Timer();
   timerStopReconnect->setTimeout(CloseConnexion, 5000);
 }
 
@@ -143,6 +139,7 @@ void Client::Reconnect() {
   package.token = token;
   package.size = sizeof(Reconnect);
   std::vector<char> Data = package.serialize();
+  Socket::sendTo(sockfd, ip_server, DEFAULT_SERVER_PORT, Data);
   stream->SendData(Data);
 }
 
@@ -154,15 +151,12 @@ void Client::CloseConnexion() {
   if (timerReconnect) {
     timerReconnect->stop();
   }
-  delete timerPing;
-  delete timerReconnect;
-  delete timerStopReconnect;
-  delete timerDisconnect;
   stream->Close();
+  stream.reset();
 }
 
 void Client::Ping(){
-  struct Ping package;
+  struct Ping package{};
   package.ping_id = ping_id;
   ping_id += 1;
   package.ping_timer = getTimestamp();
