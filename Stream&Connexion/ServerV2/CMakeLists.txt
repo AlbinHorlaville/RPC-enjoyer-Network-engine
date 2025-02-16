@@ -3,7 +3,7 @@ project(ServerV2)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(ServerV2 Main.cpp)
+add_executable(ServerV2 Main.cpp Server.cpp)
 
 target_link_libraries(ServerV2 Stream)
 target_include_directories(ServerV2 PRIVATE ${CMAKE_SOURCE_DIR}/Stream)

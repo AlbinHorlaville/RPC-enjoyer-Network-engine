@@ -5,27 +5,40 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include "Timer.h"
 #include <cstdint>
 #include <functional>
+#include <string>
+#include <memory>
+#include <map>
 
 class Stream;
 
+struct ClientInfo {
+    std::string ip;
+    uint16_t port;
+    uint64_t token;
+    uint64_t uuid;
+    Stream* stream;
+    Timer* timer;
+};
+
 class Server {
-    // Qu'est ce qu'on met en variable dans le serveur, la liste des clients ??
+    std::map<uint64_t, ClientInfo> clients;
+    int connectionSockfd;
+    uint64_t msg_id;
 public:
     Server();
     ~Server();
 
-    void Listen(uint16_t port);
-
-    void OnClientConnected(std::function<void(uint64_t)> handler);
-    void Receive(std::function<void(uint64_t)> handler);
-    void Pong();
-    void OnClientDisconnected(std::function<void(uint64_t)> handler);
-
-    std::unique_ptr<Stream> CreateStream(uint64_t client, bool reliable);
-
-    void CloseStream(const Stream& stream);
+    void Listen();
+    uint64_t GetTestClientID() const;
+    void OnClientConnected(std::vector<char> buffer, const std::string& ip_client);
+    void Receive();
+    void Pong(uint64_t uuid, uint64_t ping_id);
+    void OnClientDisconnected(uint64_t uuid);
+    void SendData(uint64_t const& uuid, std::string const& data);
+    void CreateStream(uint64_t uuid, bool reliable);
 };
 
 
