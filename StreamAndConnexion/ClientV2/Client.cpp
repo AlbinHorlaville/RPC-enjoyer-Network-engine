@@ -101,8 +101,8 @@ void Client::OnDisconnect() {
   stream->Close();
   timerPing->stop();
   timerDisconnect->stop();
-  timerReconnect->setInterval(Reconnect, 1000);
-  timerStopReconnect->setTimeout(CloseConnexion, 5000);
+  timerReconnect->setInterval([this](){Reconnect();}, 1000);
+  timerStopReconnect->setTimeout([this](){CloseConnexion();}, 5000);
 }
 
 void Client::ReceiveData() {
@@ -125,10 +125,10 @@ void Client::ReceiveData() {
       CreateStream(false);
 
       // Start the PING timer
-      timerPing->setInterval(Ping, 200);
+      timerPing->setInterval([this](){Ping();}, 200);
 
       // Start the DISCONNECT timer
-      timerDisconnect->setTimeout(OnDisconnect, 1000);
+      timerDisconnect->setTimeout([this](){OnDisconnect();}, 1000);
       break;
     }
     case 5: {
@@ -142,7 +142,7 @@ void Client::ReceiveData() {
 
       // Reset the timer
       timerDisconnect->stop();
-      timerDisconnect->setTimeout(OnDisconnect, 1000);
+      timerDisconnect->setTimeout([this](){OnDisconnect();}, 1000);
       break;
     }
     case 6: {

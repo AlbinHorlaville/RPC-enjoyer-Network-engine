@@ -48,9 +48,7 @@ void Server::Listen() {
     std::string ip_client;
 
     // Wait until we receive a CONNECT or a RECONNECT package
-    while(buffer[0] == '1' || buffer[0] == '2') {
-        Socket::recvFrom(connectionSockfd, ip_client, std::span<char, 65535>(buffer));
-    }
+    Socket::recvFrom(connectionSockfd, ip_client, std::span<char, 65535>(buffer));
 
     OnClientConnected(buffer, ip_client);
 }

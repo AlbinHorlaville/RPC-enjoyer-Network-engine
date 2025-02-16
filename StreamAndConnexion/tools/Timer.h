@@ -1,17 +1,10 @@
-//
-// Library found here : https://www.fluentcpp.com/2018/12/28/timer-cpp/
-//
-
-#ifndef TIMER_H
-#define TIMER_H
-
+#include <functional>
 #include <thread>
+#include <chrono>
 
 class Timer {
-    bool clear = false;
-
 public:
-    void setTimeout(auto function, int delay) {
+    void setTimeout(std::function<void()> function, int delay) {
         this->clear = false;
         std::thread t([this, function, delay]() {
             if(this->clear) return;
@@ -22,7 +15,7 @@ public:
         t.detach();
     }
 
-    void setInterval(auto function, int interval) {
+    void setInterval(std::function<void()> function, int interval) {
         this->clear = false;
         std::thread t([this, function, interval]() {
             while(true) {
@@ -38,6 +31,7 @@ public:
     void stop() {
         this->clear = true;
     }
-};
 
-#endif //TIMER_H
+private:
+    bool clear = false;
+};
