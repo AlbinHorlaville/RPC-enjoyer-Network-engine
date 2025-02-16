@@ -107,6 +107,7 @@ struct Disconnect {
 // Header : 4, Server -> Client
 struct Connect_ACK {
   uint16_t size;
+  uint16_t port;
   uint64_t uuid;
   uint64_t token;
 
@@ -114,6 +115,7 @@ struct Connect_ACK {
     std::vector<char> buffer;
     buffer.push_back(4);
     serializeField(buffer, this->size);
+    serializeField(buffer, this->port);
     serializeField(buffer, this->uuid);
     serializeField(buffer, this->token);
     return buffer;
@@ -122,6 +124,7 @@ struct Connect_ACK {
   void deserialize(const std::span<const char>& buffer) {
     const char* data = buffer.data()+1;
     deserializeField(data, this->size);
+    deserializeField(data, this->port);
     deserializeField(data, this->uuid);
     deserializeField(data, this->token);
   }
@@ -217,5 +220,9 @@ struct Data_ACK {
     deserializeField(data, this->last_rcv);
   }
 };
+
+inline uint64_t getTimestamp() {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
 
 #endif //FORMATPACKAGE_H

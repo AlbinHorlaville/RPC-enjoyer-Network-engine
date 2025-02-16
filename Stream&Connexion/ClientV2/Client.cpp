@@ -7,9 +7,23 @@
 #include "Timer.h"
 #include "Stream.h"
 #include "Socket.h"
-#include "fmt/base.h"
 
-Client::Client() : stream(nullptr), timerPing(nullptr), timerDisconnect(nullptr), ping_id(0), uuid(-1), sockfd(0){}
+Client::Client() {
+  stream = nullptr;
+  timerPing = nullptr;
+  timerDisconnect = nullptr;
+  timerReconnect = nullptr;
+  timerStopReconnect = nullptr;
+  ping_id = 0;
+  uuid = 0;
+  token = 0;
+  msg_id = 0;
+  sockfd = 0;
+  ip_server = "";
+  port_server = 0;
+  version = "";
+  latence = 0;
+}
 
 void Client::ConnectTo(const std::string& ip, uint16_t port){
   Socket::initialize();
@@ -20,15 +34,7 @@ void Client::ConnectTo(const std::string& ip, uint16_t port){
   package.version = version;
   package.size = sizeof(Connect);
   std::vector<char> Data = package.serialize();
-  stream->SendData(Data);
-
-  // Start the PING timer
-  timerPing = new Timer();
-  timerPing->setInterval(Ping, 200);
-
-  // Start the DISCONNECT timer
-  timerDisconnect = new Timer();
-  timerDisconnect->setTimeout(OnDisconnect, 1000);
+  Socket::sendTo(sockfd, ip_server, port_server, Data);
 }
 
 void Client::SendData(std::string const& data) {
@@ -45,15 +51,72 @@ void Client::SendData(std::string const& data) {
 }
 
 void Client::ReceiveData() {
-  std::vector<char> buffer;
-  stream->ReceiveData(std::span<char, 65535>(buffer));
+  std::vector<char> bufferReceive;
+  std::vector<char> bufferSend;
+  stream->ReceiveData(std::span<char, 65535>(bufferReceive));
 
-  switch (buffer[0]) {
-    case ""
+  switch (bufferReceive[0]) {
+    case 4: // CONNECT_ACK
+      // Deserialize Package
+      struct Connect_ACK connect_ack{};
+      connect_ack.deserialize(bufferReceive);
+      uuid = connect_ack.uuid;
+      token = connect_ack.token;
+      port_server = connect_ack.port;
+
+      // Create Stream
+      CreateStream(false);
+
+      // Start the PING timer
+      timerPing = new Timer();
+      timerPing->setInterval(Ping, 200);
+
+      // Start the DISCONNECT timer
+      timerDisconnect = new Timer();
+      timerDisconnect->setTimeout(OnDisconnect, 1000);
+      break;
+    case 5: // PONG
+      // Deserialize Package
+      struct Ping pong{};
+      pong.deserialize(bufferReceive);
+
+    // Calcul the latence
+      latence = getTimestamp() - pong.ping_timer;
+
+      // Reset the timer
+      timerDisconnect->stop();
+      timerDisconnect->setTimeout(OnDisconnect, 1000);
+      break;
+    case 6: // DATA
+      // Deserialize Package
+      struct Data data;
+      data.deserialize(bufferReceive);
+
+      // Print Message
+      std::cout << "Message receive from Server : " << data.data << std::endl;
+      std::cout << "Sending back ACK..." << std::endl;
+
+      // Send DATA_ACK
+      struct Data_ACK data_ack{};
+      data_ack.uuid = uuid;
+      data_ack.last_rcv_id = data.msg_id;
+      data_ack.last_rcv = 0;
+      data_ack.size = sizeof(data_ack);
+      bufferSend = data_ack.serialize();
+      stream->SendData(bufferSend);
+      break;
+    case 7: // DATA ACK
+      // Deserialize Package
+      struct Data_ACK ack{};
+      ack.deserialize(bufferReceive);
+      std::cout << "DATA_ACK received : " << ack.last_rcv_id << std::endl;
+      // A finir : Faire un suivi des messages envoyer pour que l'ack ait un intérêt.
+      break;
+    default:
+      // Never happen
+      break;
   }
 }
-
-void Client::OnConnectionEvent(std::function<void(bool, uint64_t)> handler){}
 
 void Client::OnDisconnect() {
   timerPing->stop();
@@ -77,7 +140,7 @@ void Client::Reconnect() {
   // Try to RECONNECT to the server.
   struct Reconnect package;
   package.uuid = uuid;
-  package.token = 1;
+  package.token = token;
   package.size = sizeof(Reconnect);
   std::vector<char> Data = package.serialize();
   stream->SendData(Data);
@@ -102,15 +165,17 @@ void Client::Ping(){
   struct Ping package;
   package.ping_id = ping_id;
   ping_id += 1;
-  package.ping_timer = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  package.ping_timer = getTimestamp();
   package.uuid = uuid;
   package.size = sizeof(package);
   std::vector<char> Data = package.serialize();
   stream->SendData(Data);
 }
 
-std::unique_ptr<Stream> Client::CreateStream(bool reliable) {
-  *stream = Stream(1, false, sockfd, ip_server, port_server, [](std::span<const char>) {
-  // SWITCH CASE SUR CE QUON RECOIT
-});
+void Client::CreateStream(bool reliable) {
+  *stream = Stream(1, reliable, sockfd, ip_server, port_server);
+}
+
+uint16_t Client::GetLatence() const {
+  return latence;
 }
