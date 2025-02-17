@@ -1,5 +1,5 @@
 //
-// Created by Albin Horlaville on 10/02/2025.
+// Created by Albin Horlaville & Hugo Girard on 10/02/2025.
 //
 
 #include "Server.h"
@@ -12,11 +12,9 @@
 #define PORT_RECEIVE 5555
 
 uint64_t generateRandomUint64() {
-    // Initialize random number generator with a random seed
     std::random_device rd;
     std::mt19937_64 gen(rd());  // 64-bit Mersenne Twister engine
 
-    // Define a uniform distribution for uint64_t (in the full range)
     std::uniform_int_distribution<uint64_t> dis;
 
     // Generate and return a random uint64_t
@@ -24,18 +22,14 @@ uint64_t generateRandomUint64() {
 }
 
 uint16_t generateRandomPort() {
-    std::random_device rd; // Obtain a random seed
+    std::random_device rd;
     std::mt19937 gen(rd());  // Mersenne Twister random number generator
-    std::uniform_int_distribution<uint16_t> dis(1024, 60000);  // Uniform distribution between 1024 and 60000
+    std::uniform_int_distribution<uint16_t> dis(1024, 60000);
 
     return dis(gen);  // Generate and return a random port number
 }
 
-Server::Server() : connectionSockfd(0), msg_id(0){}
-
-Server::~Server() {}
-
-void Server::getIPandPort(std::string* ip, uint16_t* port) {
+void getIPandPort(std::string* ip, uint16_t* port) {
     std::string ip_copy = *ip;
     auto pos = ip->find_last_of (':');
     if (pos != std::string::npos) {
@@ -44,6 +38,10 @@ void Server::getIPandPort(std::string* ip, uint16_t* port) {
         *port = atoi(port_str.c_str());
     }
 }
+
+Server::Server() : connectionSockfd(0), msg_id(0){}
+
+Server::~Server() {}
 
 void Server::Listen() {
     Socket::initialize();
@@ -70,10 +68,6 @@ void Server::Listen() {
     OnClientConnected(buffer, ip_client);
 }
 
-uint64_t Server::GetTestClientID() const {
-    return clients.begin()->second.uuid;
-}
-
 void Server::OnClientConnected(std::span<char, 65535> buffer, const std::string& ip_client) {
     if (buffer.empty()) {
         throw std::invalid_argument("Buffer is empty");
@@ -89,24 +83,28 @@ void Server::OnClientConnected(std::span<char, 65535> buffer, const std::string&
         const uint64_t newToken = generateRandomUint64();
         const uint16_t newPort = generateRandomPort();
         const uint64_t uuid = clients.size();
-        Connect_ACK connect_ack{sizeof(connect_ack), newPort, uuid, newToken};
 
-        Socket::sendTo(connectionSockfd, ip, PORT_SEND, connect_ack.serialize());
         ClientInfo client{ip, newPort, newToken, uuid, nullptr, new Timer()};
         auto* stream = new Stream(1, false, ip, newPort+1, newPort);
         client.stream = stream;
         clients[uuid] = client;
+
         std::cout << "Client port : " << client.port << std::endl;
+
+        Connect_ACK connect_ack{sizeof(connect_ack), newPort, uuid, newToken};
+        Socket::sendTo(connectionSockfd, ip, PORT_SEND, connect_ack.serialize());
     // RECONNECT
     } else if (buffer[0] == 2) {
         struct Reconnect reconnect{};
         reconnect.deserialize(buffer);
         if(clients.contains(reconnect.uuid) && reconnect.token == clients[reconnect.uuid].token) {
-            auto* stream = new Stream(1, false, ip, clients[reconnect.uuid].port+1, clients[reconnect.uuid].port);
-            clients[reconnect.uuid].stream = stream;
-            clients[reconnect.uuid].timer = new Timer();
-            Connect_ACK connect_ack{sizeof(connect_ack), clients[reconnect.uuid].port, reconnect.uuid, reconnect.token};
+            ClientInfo* client = &clients[reconnect.uuid];
+            auto* stream = new Stream(1, false, ip, client->port+1, client->port);
+            client->stream = stream;
+            client->timer = new Timer();
+            Connect_ACK connect_ack{sizeof(connect_ack), client->port, reconnect.uuid, reconnect.token};
             Socket::sendTo(connectionSockfd, ip, PORT_SEND, connect_ack.serialize());
+            std::cout << "Client " << reconnect.uuid << " reconnected." << std::endl;
         }
     }
 }
@@ -180,7 +178,6 @@ void Server::SendData(uint64_t const& uuid, std::string const& data) {
     Stream* clientStream = clients[uuid].stream;
     package.uuid = uuid;
     package.stream_id = clientStream->getId();
-    package.flag = Flag::NONE;
     package.msg_id = msg_id++;
     package.data = data;
     package.size = sizeof(package);
@@ -189,7 +186,7 @@ void Server::SendData(uint64_t const& uuid, std::string const& data) {
 }
 
 void Server::Pong(const uint64_t uuid, const uint64_t ping_id) {
-    Ping ping{sizeof(ping), uuid, ping_id};
+    Ping ping{sizeof(ping), uuid, ping_id, getTimestamp()};
     clients[uuid].stream->SendData(ping.serialize());
 }
 
@@ -197,9 +194,4 @@ void Server::OnClientDisconnected(const uint64_t uuid) {
     clients[uuid].stream->Close();
     clients[uuid].timer->stop();
     std::cout << "Client disconnected : " << clients[uuid].uuid << std::endl;
-}
-
-void Server::CreateStream(const uint64_t uuid, const bool reliable) {
-    auto* stream = new Stream(1, reliable, clients[uuid].ip, PORT_RECEIVE, clients[uuid].port);
-    clients[uuid].stream = stream;
 }

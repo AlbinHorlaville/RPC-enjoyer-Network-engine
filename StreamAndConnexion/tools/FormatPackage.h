@@ -1,5 +1,5 @@
 //
-// Created by Albin Horlaville on 10/02/2025.
+// Created by Albin Horlaville & Hugo Girard on 10/02/2025.
 //
 
 #ifndef FORMATPACKAGE_H
@@ -9,11 +9,6 @@
 #include <cstdint>
 #include <span>
 #include <vector>
-
-enum Flag {
-  NONE,
-  SPLIT
-};
 
 template<typename T>
 void serializeField(std::vector<char>& buffer, const T& value) {
@@ -161,9 +156,6 @@ struct Data {
   uint16_t size;
   uint64_t uuid;
   uint64_t stream_id; // First bit at 1 = reliable, 0 = unreliable
-  Flag flag; // Split ?
-  uint64_t part_id; // Useful if split
-  uint64_t total; // Useful if split
   uint64_t msg_id;
   std::string data;
 
@@ -173,9 +165,6 @@ struct Data {
     serializeField(buffer, this->size);
     serializeField(buffer, this->uuid);
     serializeField(buffer, this->stream_id);
-    serializeField(buffer, this->flag);
-    serializeField(buffer, this->part_id);
-    serializeField(buffer, this->total);
     serializeField(buffer, this->msg_id);
     serializeString(buffer, this->data);
     return buffer;
@@ -186,9 +175,6 @@ struct Data {
     deserializeField(data, this->size);
     deserializeField(data, this->uuid);
     deserializeField(data, this->stream_id);
-    deserializeField(data, this->flag);
-    deserializeField(data, this->part_id);
-    deserializeField(data, this->total);
     deserializeField(data, this->msg_id);
     deserializeString(data, this->data);
   }

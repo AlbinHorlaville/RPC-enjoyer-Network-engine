@@ -1,5 +1,5 @@
 //
-// Created by Albin Horlaville on 10/02/2025.
+// Created by Albin Horlaville & Hugo Girard on 10/02/2025.
 //
 
 #ifndef SERVER_H
@@ -7,9 +7,7 @@
 
 #include "Timer.h"
 #include <cstdint>
-#include <functional>
 #include <string>
-#include <memory>
 #include <span>
 #include <map>
 
@@ -33,16 +31,11 @@ public:
     ~Server();
 
     void Listen();
-    uint64_t GetTestClientID() const;
     void OnClientConnected(std::span<char, 65535> buffer, const std::string& ip_client);
     void Receive();
     void Pong(uint64_t uuid, uint64_t ping_id);
     void OnClientDisconnected(uint64_t uuid);
     void SendData(uint64_t const& uuid, std::string const& data);
-    void CreateStream(uint64_t uuid, bool reliable);
-
-private:
-    void getIPandPort(std::string* ip, uint16_t* port);
 };
 
 

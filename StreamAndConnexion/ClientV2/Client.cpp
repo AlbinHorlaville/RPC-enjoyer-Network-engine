@@ -10,13 +10,13 @@
 #define PORT_RECEIVE 5556
 
 Client::Client() {
+  connected = false;
   ping_id = 0;
   uuid = 0;
   token = 0;
   msg_id = 0;
-  sockfd = 0;
+  connectionSockfd = 0;
   ip_server = "";
-  port_server = 0;
   version = "1.0.0";
   latence = 0;
   timerDisconnect = std::make_unique<Timer>();
@@ -39,7 +39,7 @@ void Client::Ping(){
 
 void Client::ConnectTo(const std::string& ip){
   Socket::initialize();
-  sockfd = Socket::connect(ip, PORT_RECEIVE);
+  connectionSockfd = Socket::connect(ip, PORT_RECEIVE);
 
   // Send the package CONNECT
   struct Connect package;
@@ -47,16 +47,16 @@ void Client::ConnectTo(const std::string& ip){
   package.size = sizeof(package);
   std::vector<char> Data = package.serialize();
   ip_server = ip;
-  Socket::sendTo(sockfd, ip, PORT_SEND, Data);
+  Socket::sendTo(connectionSockfd, ip, PORT_SEND, Data);
 
   std::array<char, 65535> buffer;
 
   std::string ip_client;
 
   // Wait until we receive a CONNECT or a RECONNECT package
-  long long read_bytes = Socket::recvFrom(sockfd, ip_client, std::span<char, 65535>(buffer));
+  long long read_bytes = Socket::recvFrom(connectionSockfd, ip_client, std::span<char, 65535>(buffer));
   if (read_bytes < 0) {
-    Socket::close(sockfd);
+    Socket::close(connectionSockfd);
     Socket::cleanup();
     exit(EXIT_FAILURE);
   }
@@ -66,16 +66,17 @@ void Client::ConnectTo(const std::string& ip){
   connect_ack.deserialize(buffer);
   uuid = connect_ack.uuid;
   token = connect_ack.token;
-  port_server = connect_ack.port;
 
   // Create Stream
-  stream = std::make_unique<Stream>(1, false, ip, port_server, port_server+1);
+  stream = std::make_unique<Stream>(1, false, ip, connect_ack.port, connect_ack.port+1);
 
   // Start the PING timer
   timerPing->setInterval([this](){Ping();}, 200);
 
   // Start the DISCONNECT timer
   timerDisconnect->setTimeout([this](){OnDisconnect();}, 1000);
+
+  connected = true;
 }
 
 void Client::SendData(std::string const& data) {
@@ -83,7 +84,6 @@ void Client::SendData(std::string const& data) {
   struct Data package;
   package.uuid = uuid;
   package.stream_id = stream->getId();
-  package.flag = Flag::NONE;
   package.msg_id = msg_id++;
   package.data = data;
   package.size = sizeof(package);
@@ -92,6 +92,7 @@ void Client::SendData(std::string const& data) {
 }
 
 void Client::CloseConnexion() {
+  connected = false;
   // Fermeture de la connexion
   if (timerPing) {
     timerPing->stop();
@@ -114,18 +115,46 @@ void Client::Disconnect() {
 }
 
 void Client::Reconnect() {
+  if (connected) return;
+
   // Try to RECONNECT to the server.
   struct Reconnect package;
   package.uuid = uuid;
   package.token = token;
   package.size = sizeof(package);
   std::vector<char> Data = package.serialize();
-  Socket::sendTo(sockfd, ip_server, PORT_SEND, Data);
-  stream->SendData(Data);
-}
+  Socket::sendTo(connectionSockfd, ip_server, PORT_SEND, Data);
 
-void Client::CreateStream(bool reliable) {
-  *stream = Stream(1, reliable, ip_server, PORT_RECEIVE, port_server);
+  std::array<char, 65535> buffer;
+
+  std::string ip_client;
+
+  // Wait until we receive a CONNECT or a RECONNECT package
+  long long read_bytes = Socket::recvFrom(connectionSockfd, ip_client, std::span<char, 65535>(buffer));
+  if (read_bytes < 0) {
+    Socket::close(connectionSockfd);
+    Socket::cleanup();
+    exit(EXIT_FAILURE);
+  }
+
+  // Deserialize Package
+  struct Connect_ACK connect_ack{};
+  connect_ack.deserialize(buffer);
+  uuid = connect_ack.uuid;
+  token = connect_ack.token;
+
+  // Create Stream
+  stream = std::make_unique<Stream>(1, false, ip_server, connect_ack.port, connect_ack.port+1);
+
+  // Start the PING timer
+  timerPing->setInterval([this](){Ping();}, 200);
+
+  // Start the DISCONNECT timer
+  timerDisconnect->setTimeout([this](){OnDisconnect();}, 1000);
+
+  connected = true;
+
+  std::cout << "Reconnect !" << std::endl;
 }
 
 uint16_t Client::GetLatence() const {
@@ -133,6 +162,7 @@ uint16_t Client::GetLatence() const {
 }
 
 void Client::OnDisconnect() {
+  std::cout << "OnDisconnect !" << std::endl;
   stream->Close();
   timerPing->stop();
   timerDisconnect->stop();
@@ -195,4 +225,5 @@ void Client::ReceiveData() {
       break;
     }
   }
+  bufferReceive.fill(0);
 }

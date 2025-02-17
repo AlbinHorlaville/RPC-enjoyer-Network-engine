@@ -1,5 +1,5 @@
 //
-// Created by Albin Horlaville on 10/02/2025.
+// Created by Albin Horlaville & Hugo Girard on 10/02/2025.
 //
 
 #include "Stream.h"

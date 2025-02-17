@@ -1,5 +1,5 @@
 //
-// Created by Albin Horlaville on 10/02/2025.
+// Created by Albin Horlaville & Hugo Girard on 10/02/2025.
 //
 
 #include "Client.h"
@@ -18,7 +18,14 @@ int main(int argc, const char * argv[]) {
 
     client.ReceiveData();
 
-    cout << "Latence : " << client.GetLatence() << endl;
+    cout << "Latence : " << client.GetLatence() << "ms." << endl;
 
-    //client.Disconnect();
+    client.Disconnect();
+
+    wait(new int(2000));
+    client.Reconnect();
+
+    while (true) {
+        client.ReceiveData();
+    }
 }

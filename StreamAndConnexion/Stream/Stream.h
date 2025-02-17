@@ -1,5 +1,5 @@
 //
-// Created by Albin Horlaville on 10/02/2025.
+// Created by Albin Horlaville & Hugo Girard on 10/02/2025.
 //
 
 #ifndef STREAM_H
@@ -19,7 +19,6 @@ class Stream {
         uint16_t port_send;
 
     public:
-
         Stream(uint16_t id, bool reliable, std::string ip, uint16_t port_receive, uint16_t port_send);
         long SendData(std::span<const char> Data);
         long ReceiveData(std::span<char, 65535> buffer);
