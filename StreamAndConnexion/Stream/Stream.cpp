@@ -5,11 +5,12 @@
 #include "Stream.h"
 #include "Socket.h"
 
-Stream::Stream(uint16_t id, bool reliable, int sockfd, std::string ip, uint16_t port){
+Stream::Stream(uint16_t id, bool reliable, std::string ip, uint16_t port_receive, uint16_t port_send){
   this->id = id;
   this->reliable = reliable;
-  this->sockfd = sockfd;
-  this->port = port;
+  this->sockfd = Socket::listen(ip, port_receive);
+  this->port_receive = port_receive;
+  this->port_send = port_send;
   this->ip = ip;
 }
 
@@ -22,12 +23,13 @@ uint16_t Stream::getId() {
 }
 
 long Stream::SendData(std::span<const char> Data){
-  long size = Socket::sendTo(this->sockfd, this->ip, this->port, Data);
+  long size = Socket::sendTo(this->sockfd, this->ip, this->port_send, Data);
   return size;
 }
 
 long Stream::ReceiveData(std::span<char, 65535> buffer){
-  long size = Socket::recvFrom(this->sockfd, this->ip, buffer);
+  std::string fake_ip;
+  long size = Socket::recvFrom(this->sockfd, fake_ip, buffer);
   return size;
 }
 

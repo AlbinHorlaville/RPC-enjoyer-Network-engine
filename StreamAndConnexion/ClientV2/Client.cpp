@@ -19,6 +19,10 @@ Client::Client() {
   port_server = 0;
   version = "1.0.0";
   latence = 0;
+  timerDisconnect = std::make_unique<Timer>();
+  timerPing = std::make_unique<Timer>();
+  timerReconnect = std::make_unique<Timer>();
+  timerStopReconnect = std::make_unique<Timer>();
 }
 
 void Client::Ping(){
@@ -30,6 +34,7 @@ void Client::Ping(){
   package.size = sizeof(package);
   std::vector<char> Data = package.serialize();
   stream->SendData(Data);
+  std::cout << "Ping " << package.ping_id << std::endl;
 }
 
 void Client::ConnectTo(const std::string& ip){
@@ -43,6 +48,34 @@ void Client::ConnectTo(const std::string& ip){
   std::vector<char> Data = package.serialize();
   ip_server = ip;
   Socket::sendTo(sockfd, ip, PORT_SEND, Data);
+
+  std::array<char, 65535> buffer;
+
+  std::string ip_client;
+
+  // Wait until we receive a CONNECT or a RECONNECT package
+  long long read_bytes = Socket::recvFrom(sockfd, ip_client, std::span<char, 65535>(buffer));
+  if (read_bytes < 0) {
+    Socket::close(sockfd);
+    Socket::cleanup();
+    exit(EXIT_FAILURE);
+  }
+
+  // Deserialize Package
+  struct Connect_ACK connect_ack{};
+  connect_ack.deserialize(buffer);
+  uuid = connect_ack.uuid;
+  token = connect_ack.token;
+  port_server = connect_ack.port;
+
+  // Create Stream
+  stream = std::make_unique<Stream>(1, false, ip, port_server, port_server+1);
+
+  // Start the PING timer
+  timerPing->setInterval([this](){Ping();}, 200);
+
+  // Start the DISCONNECT timer
+  timerDisconnect->setTimeout([this](){OnDisconnect();}, 1000);
 }
 
 void Client::SendData(std::string const& data) {
@@ -92,7 +125,7 @@ void Client::Reconnect() {
 }
 
 void Client::CreateStream(bool reliable) {
-  *stream = Stream(1, reliable, sockfd, ip_server, port_server);
+  *stream = Stream(1, reliable, ip_server, PORT_RECEIVE, port_server);
 }
 
 uint16_t Client::GetLatence() const {
@@ -108,31 +141,11 @@ void Client::OnDisconnect() {
 }
 
 void Client::ReceiveData() {
-  std::vector<char> bufferReceive;
+  std::array<char, 65535> bufferReceive;
   std::vector<char> bufferSend;
   stream->ReceiveData(std::span<char, 65535>(bufferReceive));
 
   switch (bufferReceive[0]) {
-    case 4: {
-      // CONNECT_ACK
-
-      // Deserialize Package
-      struct Connect_ACK connect_ack{};
-      connect_ack.deserialize(bufferReceive);
-      uuid = connect_ack.uuid;
-      token = connect_ack.token;
-      port_server = connect_ack.port;
-
-      // Create Stream
-      CreateStream(false);
-
-      // Start the PING timer
-      timerPing->setInterval([this](){Ping();}, 200);
-
-      // Start the DISCONNECT timer
-      timerDisconnect->setTimeout([this](){OnDisconnect();}, 1000);
-      break;
-    }
     case 5: {
       // PONG
       // Deserialize Package
@@ -145,6 +158,7 @@ void Client::ReceiveData() {
       // Reset the timer
       timerDisconnect->stop();
       timerDisconnect->setTimeout([this](){OnDisconnect();}, 1000);
+      std::cout << "Pong " << pong.ping_id << std::endl;
       break;
     }
     case 6: {

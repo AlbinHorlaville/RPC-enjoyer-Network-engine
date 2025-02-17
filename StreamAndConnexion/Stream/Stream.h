@@ -15,11 +15,12 @@ class Stream {
         bool reliable;
         int sockfd;
         std::string ip;
-        uint16_t port;
+        uint16_t port_receive;
+        uint16_t port_send;
 
     public:
 
-        Stream(uint16_t id, bool reliable, int sockfd, std::string ip, uint16_t port);
+        Stream(uint16_t id, bool reliable, std::string ip, uint16_t port_receive, uint16_t port_send);
         long SendData(std::span<const char> Data);
         long ReceiveData(std::span<char, 65535> buffer);
         bool isReliable();

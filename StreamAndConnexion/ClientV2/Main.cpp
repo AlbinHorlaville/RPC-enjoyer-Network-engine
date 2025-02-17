@@ -11,9 +11,6 @@ int main(int argc, const char * argv[]) {
     Client client;
     client.ConnectTo("127.0.0.1");
 
-    // Receive CONNECT_ACK
-    client.ReceiveData();
-
     client.SendData("Bien le bonjour au serveur !");
 
     // Receive Send ACK
@@ -21,7 +18,7 @@ int main(int argc, const char * argv[]) {
 
     client.ReceiveData();
 
-    cout << client.GetLatence() << endl;
+    cout << "Latence : " << client.GetLatence() << endl;
 
-    client.Disconnect();
+    //client.Disconnect();
 }

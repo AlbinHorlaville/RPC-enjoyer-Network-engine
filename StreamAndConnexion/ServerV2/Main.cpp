@@ -10,10 +10,7 @@ int main(int argc, const char * argv[]) {
     std::cout << "Listening..." << std::endl;
     server.Listen();
     std::cout << "Client connected!" << std::endl;
-    server.Receive();
-    server.SendData(server.GetTestClientID(), "Le Québec est une province du Canada dont les frontières correspondent au territoire de la nation québécoise. Vivent également au sein du territoire québécois onze nations autochtones. La capitale du Québec est la ville de Québec, et sa métropole est Montréal. La langue officielle du Québec est le français.");
-    server.Receive();
-    server.Receive();
-
-    return 0;
+    while (true) {
+        server.Receive();
+    }
 }

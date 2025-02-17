@@ -7,7 +7,6 @@
 #include "Socket.h"
 #include "FormatPackage.h"
 #include <random>
-#include <memory>
 
 #define PORT_SEND 5556
 #define PORT_RECEIVE 5555
@@ -36,20 +35,37 @@ Server::Server() : connectionSockfd(0), msg_id(0){}
 
 Server::~Server() {}
 
+void Server::getIPandPort(std::string* ip, uint16_t* port) {
+    std::string ip_copy = *ip;
+    auto pos = ip->find_last_of (':');
+    if (pos != std::string::npos) {
+        *ip = ip_copy.substr (0,pos);
+        std::string port_str = ip_copy.substr (++pos);
+        *port = atoi(port_str.c_str());
+    }
+}
+
 void Server::Listen() {
     Socket::initialize();
-    connectionSockfd = Socket::listen("127.0.0.1", PORT_RECEIVE);
-    if (connectionSockfd < 0) {
-        perror("Socket creation failed");
-        exit(EXIT_FAILURE);
+    if (connectionSockfd == 0) {
+        connectionSockfd = Socket::listen("127.0.0.1", PORT_RECEIVE);
+        if (connectionSockfd < 0) {
+            perror("Socket creation failed");
+            exit(EXIT_FAILURE);
+        }
     }
 
-    std::vector<char> buffer;
+    std::array<char, 65535> buffer;
 
     std::string ip_client;
 
     // Wait until we receive a CONNECT or a RECONNECT package
-    Socket::recvFrom(connectionSockfd, ip_client, std::span<char, 65535>(buffer));
+    long long read_bytes = Socket::recvFrom(connectionSockfd, ip_client, std::span<char, 65535>(buffer));
+    if (read_bytes < 0) {
+        Socket::close(connectionSockfd);
+        Socket::cleanup();
+        exit(EXIT_FAILURE);
+    }
 
     OnClientConnected(buffer, ip_client);
 }
@@ -58,33 +74,45 @@ uint64_t Server::GetTestClientID() const {
     return clients.begin()->second.uuid;
 }
 
-void Server::OnClientConnected(std::vector<char> buffer, const std::string& ip_client) {
+void Server::OnClientConnected(std::span<char, 65535> buffer, const std::string& ip_client) {
+    if (buffer.empty()) {
+        throw std::invalid_argument("Buffer is empty");
+    }
+
+    // Separate ip and port
+    std::string ip = ip_client;
+    uint16_t port = 0;
+    getIPandPort(&ip, &port);
+
     // CONNECT
-    if (buffer[0] == '1') {
+    if (buffer[0] == 1) {
         const uint64_t newToken = generateRandomUint64();
         const uint16_t newPort = generateRandomPort();
         const uint64_t uuid = clients.size();
         Connect_ACK connect_ack{sizeof(connect_ack), newPort, uuid, newToken};
-        Socket::sendTo(connectionSockfd, ip_client, PORT_SEND, connect_ack.serialize());
-        ClientInfo client{ip_client, newPort, newToken, uuid, nullptr, new Timer()};
-        CreateStream(uuid, false);
-        clients[uuid] = client;
 
+        Socket::sendTo(connectionSockfd, ip, PORT_SEND, connect_ack.serialize());
+        ClientInfo client{ip, newPort, newToken, uuid, nullptr, new Timer()};
+        auto* stream = new Stream(1, false, ip, newPort+1, newPort);
+        client.stream = stream;
+        clients[uuid] = client;
+        std::cout << "Client port : " << client.port << std::endl;
     // RECONNECT
-    } else if (buffer[0] == '2') {
+    } else if (buffer[0] == 2) {
         struct Reconnect reconnect{};
         reconnect.deserialize(buffer);
         if(clients.contains(reconnect.uuid) && reconnect.token == clients[reconnect.uuid].token) {
-            CreateStream(reconnect.uuid, false);
+            auto* stream = new Stream(1, false, ip, clients[reconnect.uuid].port+1, clients[reconnect.uuid].port);
+            clients[reconnect.uuid].stream = stream;
             clients[reconnect.uuid].timer = new Timer();
             Connect_ACK connect_ack{sizeof(connect_ack), clients[reconnect.uuid].port, reconnect.uuid, reconnect.token};
-            Socket::sendTo(connectionSockfd, ip_client, PORT_SEND, connect_ack.serialize());
+            Socket::sendTo(connectionSockfd, ip, PORT_SEND, connect_ack.serialize());
         }
     }
 }
 
 void Server::Receive() {
-    std::vector<char> bufferReceive;
+    std::array<char, 65535> bufferReceive;
     std::vector<char> bufferSend;
     clients.begin()->second.stream->ReceiveData(std::span<char, 65535>(bufferReceive));
 
@@ -97,16 +125,17 @@ void Server::Receive() {
             Listen();
             break;
         }
-        case 5: // PONG
+        case 5: // PING
         {
             // Deserialize Package
-            struct Ping pong{};
-            pong.deserialize(bufferReceive);
-            ClientInfo pongClient = clients[pong.uuid];
+            struct Ping ping{};
+            ping.deserialize(bufferReceive);
+            ClientInfo pongClient = clients[ping.uuid];
             pongClient.timer->stop();
-            auto function = [this, pong] () { OnClientDisconnected(pong.uuid);};
+            auto function = [this, ping] () { OnClientDisconnected(ping.uuid);};
             pongClient.timer->setTimeout(function,1000);
-            Pong(pong.uuid, pong.ping_id);
+            std::cout << "Pong : " << ping.ping_id << std::endl;
+            Pong(ping.uuid, ping.ping_id);
             break;
         }
         case 6: // DATA
@@ -142,6 +171,7 @@ void Server::Receive() {
             // Never happen
             break;
     }
+    bufferReceive.fill(0);
 }
 
 void Server::SendData(uint64_t const& uuid, std::string const& data) {
@@ -165,10 +195,11 @@ void Server::Pong(const uint64_t uuid, const uint64_t ping_id) {
 
 void Server::OnClientDisconnected(const uint64_t uuid) {
     clients[uuid].stream->Close();
-    delete clients[uuid].timer;
+    clients[uuid].timer->stop();
+    std::cout << "Client disconnected : " << clients[uuid].uuid << std::endl;
 }
 
 void Server::CreateStream(const uint64_t uuid, const bool reliable) {
-    auto* stream = new Stream(1, reliable, connectionSockfd, clients[uuid].ip, clients[uuid].port);
+    auto* stream = new Stream(1, reliable, clients[uuid].ip, PORT_RECEIVE, clients[uuid].port);
     clients[uuid].stream = stream;
 }
