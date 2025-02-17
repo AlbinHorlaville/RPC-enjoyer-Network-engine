@@ -29,7 +29,7 @@ long Stream::SendData(std::span<const char> Data){
 
 long Stream::ReceiveData(std::span<char, 65535> buffer){
   std::string fake_ip;
-  if (this->sockfd == INVALID_SOCKET) {
+  if (this->sockfd == -1) {
     return -1;
   }
   long size = Socket::recvFrom(this->sockfd, fake_ip, buffer);
@@ -37,8 +37,8 @@ long Stream::ReceiveData(std::span<char, 65535> buffer){
 }
 
 void Stream::Close(){
-  if (this->sockfd != INVALID_SOCKET) {
+  if (this->sockfd != -1) {
     Socket::close(this->sockfd);
-    this->sockfd = INVALID_SOCKET; // Prevent double close
+    this->sockfd = -1; // Prevent double close
   }
 }
