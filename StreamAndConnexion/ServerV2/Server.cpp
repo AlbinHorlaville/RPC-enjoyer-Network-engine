@@ -7,6 +7,8 @@
 #include "Socket.h"
 #include "FormatPackage.h"
 #include <random>
+#include <array>
+#include <span>
 
 #define PORT_SEND 5556
 #define PORT_RECEIVE 5555
