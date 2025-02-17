@@ -6,7 +6,8 @@
 #include "FormatPackage.h"
 #include "Socket.h"
 
-#define DEFAULT_SERVER_PORT 5555
+#define PORT_SEND 5555
+#define PORT_RECEIVE 5556
 
 Client::Client() {
   ping_id = 0;
@@ -16,7 +17,7 @@ Client::Client() {
   sockfd = 0;
   ip_server = "";
   port_server = 0;
-  version = "";
+  version = "1.0.0";
   latence = 0;
 }
 
@@ -33,14 +34,15 @@ void Client::Ping(){
 
 void Client::ConnectTo(const std::string& ip){
   Socket::initialize();
-  sockfd = Socket::connect(ip, DEFAULT_SERVER_PORT);
+  sockfd = Socket::connect(ip, PORT_RECEIVE);
 
   // Send the package CONNECT
   struct Connect package;
   package.version = version;
   package.size = sizeof(package);
   std::vector<char> Data = package.serialize();
-  Socket::sendTo(sockfd, ip_server, DEFAULT_SERVER_PORT, Data);
+  ip_server = ip;
+  Socket::sendTo(sockfd, ip, PORT_SEND, Data);
 }
 
 void Client::SendData(std::string const& data) {
@@ -85,7 +87,7 @@ void Client::Reconnect() {
   package.token = token;
   package.size = sizeof(package);
   std::vector<char> Data = package.serialize();
-  Socket::sendTo(sockfd, ip_server, DEFAULT_SERVER_PORT, Data);
+  Socket::sendTo(sockfd, ip_server, PORT_SEND, Data);
   stream->SendData(Data);
 }
 

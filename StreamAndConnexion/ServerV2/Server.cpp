@@ -9,7 +9,8 @@
 #include <random>
 #include <memory>
 
-#define PORT_CONNECT 5555
+#define PORT_SEND 5556
+#define PORT_RECEIVE 5555
 
 uint64_t generateRandomUint64() {
     // Initialize random number generator with a random seed
@@ -37,7 +38,7 @@ Server::~Server() {}
 
 void Server::Listen() {
     Socket::initialize();
-    connectionSockfd = Socket::listen("127.0.0.1", PORT_CONNECT);
+    connectionSockfd = Socket::listen("127.0.0.1", PORT_RECEIVE);
     if (connectionSockfd < 0) {
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
@@ -64,7 +65,7 @@ void Server::OnClientConnected(std::vector<char> buffer, const std::string& ip_c
         const uint16_t newPort = generateRandomPort();
         const uint64_t uuid = clients.size();
         Connect_ACK connect_ack{sizeof(connect_ack), newPort, uuid, newToken};
-        Socket::sendTo(connectionSockfd, ip_client, PORT_CONNECT, connect_ack.serialize());
+        Socket::sendTo(connectionSockfd, ip_client, PORT_SEND, connect_ack.serialize());
         ClientInfo client{ip_client, newPort, newToken, uuid, nullptr, new Timer()};
         CreateStream(uuid, false);
         clients[uuid] = client;
@@ -77,7 +78,7 @@ void Server::OnClientConnected(std::vector<char> buffer, const std::string& ip_c
             CreateStream(reconnect.uuid, false);
             clients[reconnect.uuid].timer = new Timer();
             Connect_ACK connect_ack{sizeof(connect_ack), clients[reconnect.uuid].port, reconnect.uuid, reconnect.token};
-            Socket::sendTo(connectionSockfd, ip_client, PORT_CONNECT, connect_ack.serialize());
+            Socket::sendTo(connectionSockfd, ip_client, PORT_SEND, connect_ack.serialize());
         }
     }
 }
