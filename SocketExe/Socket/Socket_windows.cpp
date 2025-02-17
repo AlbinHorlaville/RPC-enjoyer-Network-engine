@@ -42,7 +42,7 @@ long Socket::recvFrom(int sockfd, std::string &from, std::span<char, 65535> mess
     from = IpToString(reinterpret_cast<const sockaddr*>(&peer_addr));
 
     if (read_bytes == SOCKET_ERROR) {
-        std::cerr << "recvfrom failed with error: " << WSAGetLastError() << std::endl;
+        //std::cerr << "recvfrom failed with error: " << WSAGetLastError() << std::endl;
         return -1;
     }
 

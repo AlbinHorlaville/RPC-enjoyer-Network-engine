@@ -22,7 +22,6 @@ int main(int argc, const char * argv[]) {
 
     client.Disconnect();
 
-    wait(new int(2000));
     client.Reconnect();
 
     while (true) {
