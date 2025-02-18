@@ -5,6 +5,8 @@
 #include "Client.h"
 #include "FormatPackage.h"
 #include "Socket.h"
+#include <array>
+#include <span>
 
 #define PORT_SEND 5555
 #define PORT_RECEIVE 5556

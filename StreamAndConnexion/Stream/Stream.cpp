@@ -4,6 +4,7 @@
 
 #include "Stream.h"
 #include "Socket.h"
+#include <span>
 
 Stream::Stream(uint16_t id, bool reliable, std::string ip, uint16_t port_receive, uint16_t port_send){
   this->id = id;
