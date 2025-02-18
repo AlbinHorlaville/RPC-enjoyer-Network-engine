@@ -79,7 +79,7 @@ void Server::OnClientConnected(std::span<char, 65535> buffer, const std::string&
     getIPandPort(&ip, &port);
 
     // CONNECT
-    if (buffer[0] == 1) {
+    if (buffer[0] == CONNECT) {
         const uint64_t newToken = generateRandomUint64();
         const uint16_t newPort = generateRandomPort();
         const uint64_t uuid = clients.size();
@@ -94,7 +94,7 @@ void Server::OnClientConnected(std::span<char, 65535> buffer, const std::string&
         Connect_ACK connect_ack{sizeof(connect_ack), newPort, uuid, newToken};
         Socket::sendTo(connectionSockfd, ip, PORT_SEND, connect_ack.serialize());
     // RECONNECT
-    } else if (buffer[0] == 2) {
+    } else if (buffer[0] == RECONNECT) {
         struct Reconnect reconnect{};
         reconnect.deserialize(buffer);
         if(clients.contains(reconnect.uuid) && reconnect.token == clients[reconnect.uuid].token) {
@@ -109,21 +109,22 @@ void Server::OnClientConnected(std::span<char, 65535> buffer, const std::string&
     }
 }
 
-void Server::Receive() {
+int Server::Receive() {
     std::array<char, 65535> bufferReceive;
     std::vector<char> bufferSend;
     clients.begin()->second.stream->ReceiveData(std::span<char, 65535>(bufferReceive));
-
+    int res = -1;
     switch (bufferReceive[0]) {
-        case 3: // DISCONNECT
+        case DISCONNECT:
         {
             struct Disconnect disconnect{};
             disconnect.deserialize(bufferReceive);
             OnClientDisconnected(disconnect.uuid);
             Listen();
+            res = DISCONNECT;
             break;
         }
-        case 5: // PING
+        case PING:
         {
             // Deserialize Package
             struct Ping ping{};
@@ -134,9 +135,10 @@ void Server::Receive() {
             pongClient.timer->setTimeout(function,1000);
             std::cout << "Pong : " << ping.ping_id << std::endl;
             Pong(ping.uuid, ping.ping_id);
+            res = PING;
             break;
         }
-        case 6: // DATA
+        case DATA:
         {
             // Deserialize Package
             struct Data data;
@@ -154,15 +156,17 @@ void Server::Receive() {
             data_ack.size = sizeof(data_ack);
             bufferSend = data_ack.serialize();
             clients[data.uuid].stream->SendData(bufferSend);
+            res = DATA;
             break;
         }
-        case 7: // DATA ACK
+        case DATA_ACK:
         {
             // Deserialize Package
             struct Data_ACK ack{};
             ack.deserialize(bufferReceive);
             std::cout << "DATA_ACK received : " << ack.last_rcv_id << std::endl;
             // A finir : Faire un suivi des messages envoyer pour que l'ack ait un intérêt.
+            res = DATA_ACK;
             break;
         }
         default:
@@ -170,6 +174,7 @@ void Server::Receive() {
             break;
     }
     bufferReceive.fill(0);
+    return res;
 }
 
 void Server::SendData(uint64_t const& uuid, std::string const& data) {

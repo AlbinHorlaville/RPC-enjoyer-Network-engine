@@ -5,10 +5,22 @@
 #ifndef FORMATPACKAGE_H
 #define FORMATPACKAGE_H
 
+#pragma once
+
 #include <cstring>
 #include <cstdint>
 #include <span>
 #include <vector>
+
+enum PackageType {
+  CONNECT,
+  RECONNECT,
+  DISCONNECT,
+  CONNECT_ACK,
+  PING,
+  DATA,
+  DATA_ACK
+};
 
 template<typename T>
 void serializeField(std::vector<char>& buffer, const T& value) {
@@ -17,7 +29,7 @@ void serializeField(std::vector<char>& buffer, const T& value) {
   std::memcpy(buffer.data() + start, &value, sizeof(T));
 }
 
-void serializeString(std::vector<char>& buffer, const std::string& str) {
+inline void serializeString(std::vector<char>& buffer, const std::string& str) {
   uint16_t length = static_cast<uint16_t>(str.size());
   serializeField(buffer, length);
   buffer.insert(buffer.end(), str.begin(), str.end());
@@ -29,7 +41,7 @@ void deserializeField(const char*& data, T& value) {
   data += sizeof(T);
 }
 
-void deserializeString(const char*& data, std::string& str) {
+inline void deserializeString(const char*& data, std::string& str) {
   uint16_t length;
   deserializeField(data, length);
   str.assign(data, length);
@@ -43,7 +55,7 @@ struct Connect {
 
   std::vector<char> serialize() {
     std::vector<char> buffer;
-    buffer.push_back(1);
+    buffer.push_back(CONNECT);
     serializeField(buffer, this->size);
     serializeString(buffer, this->version);
     return buffer;
@@ -64,7 +76,7 @@ struct Reconnect {
 
   std::vector<char> serialize() {
     std::vector<char> buffer;
-    buffer.push_back(2);
+    buffer.push_back(RECONNECT);
     serializeField(buffer, this->size);
     serializeField(buffer, this->uuid);
     serializeField(buffer, this->token);
@@ -86,7 +98,7 @@ struct Disconnect {
 
   std::vector<char> serialize() {
     std::vector<char> buffer;
-    buffer.push_back(3);
+    buffer.push_back(DISCONNECT);
     serializeField(buffer, this->size);
     serializeField(buffer, this->uuid);
     return buffer;
@@ -108,7 +120,7 @@ struct Connect_ACK {
 
   std::vector<char> serialize() {
     std::vector<char> buffer;
-    buffer.push_back(4);
+    buffer.push_back(CONNECT_ACK);
     serializeField(buffer, this->size);
     serializeField(buffer, this->port);
     serializeField(buffer, this->uuid);
@@ -134,7 +146,7 @@ struct Ping {
 
   std::vector<char> serialize() {
     std::vector<char> buffer;
-    buffer.push_back(5);
+    buffer.push_back(PING);
     serializeField(buffer, this->size);
     serializeField(buffer, this->uuid);
     serializeField(buffer, this->ping_id);
@@ -161,7 +173,7 @@ struct Data {
 
   std::vector<char> serialize() {
     std::vector<char> buffer;
-    buffer.push_back(6);
+    buffer.push_back(DATA);
     serializeField(buffer, this->size);
     serializeField(buffer, this->uuid);
     serializeField(buffer, this->stream_id);
@@ -190,7 +202,7 @@ struct Data_ACK {
 
   std::vector<char> serialize() {
     std::vector<char> buffer;
-    buffer.push_back(7);
+    buffer.push_back(DATA_ACK);
     serializeField(buffer, this->size);
     serializeField(buffer, this->uuid);
     serializeField(buffer, this->last_rcv_id);

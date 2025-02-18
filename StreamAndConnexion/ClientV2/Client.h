@@ -5,6 +5,8 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#pragma once
+
 #include <cstdint>
 #include <functional>
 #include "Timer.h"
@@ -31,7 +33,7 @@ public:
     void ConnectTo(const std::string& ip);
     //void OnConnectionEvent(std::function<void(bool, uint64_t)> handler); //Here the bool represent the success of the connection
     void SendData(std::string const& text);
-    void ReceiveData();
+    int ReceiveData();
     void Disconnect();
     uint16_t GetLatence() const;
     void Reconnect();

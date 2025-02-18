@@ -170,13 +170,15 @@ void Client::OnDisconnect() {
   timerStopReconnect->setTimeout([this](){CloseConnexion();}, 5000);
 }
 
-void Client::ReceiveData() {
+int Client::ReceiveData() {
   std::array<char, 65535> bufferReceive;
   std::vector<char> bufferSend;
   stream->ReceiveData(std::span<char, 65535>(bufferReceive));
 
+  int res = -1;
+
   switch (bufferReceive[0]) {
-    case 5: {
+    case PING: {
       // PONG
       // Deserialize Package
       struct Ping pong{};
@@ -189,9 +191,10 @@ void Client::ReceiveData() {
       timerDisconnect->stop();
       timerDisconnect->setTimeout([this](){OnDisconnect();}, 1000);
       std::cout << "Pong " << pong.ping_id << std::endl;
+      res =  PING;
       break;
     }
-    case 6: {
+    case DATA: {
       // DATA
       // Deserialize Package
       struct Data data;
@@ -209,15 +212,17 @@ void Client::ReceiveData() {
       data_ack.size = sizeof(data_ack);
       bufferSend = data_ack.serialize();
       stream->SendData(bufferSend);
+      res = DATA;
       break;
     }
-    case 7: {
+    case DATA_ACK: {
       // DATA ACK
       // Deserialize Package
       struct Data_ACK ack{};
       ack.deserialize(bufferReceive);
       std::cout << "DATA_ACK received : " << ack.last_rcv_id << std::endl;
       // A finir : Faire un suivi des messages envoyer pour que l'ack ait un intérêt.
+      res = DATA_ACK;
       break;
     }
     default: {
@@ -226,4 +231,5 @@ void Client::ReceiveData() {
     }
   }
   bufferReceive.fill(0);
+  return res;
 }

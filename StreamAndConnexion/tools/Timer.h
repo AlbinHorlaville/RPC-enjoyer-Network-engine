@@ -2,6 +2,8 @@
 // Created by Albin Horlaville & Hugo Girard on 10/02/2025.
 //
 
+#pragma once
+
 #include <functional>
 #include <thread>
 #include <chrono>

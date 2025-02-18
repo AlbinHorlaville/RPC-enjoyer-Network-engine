@@ -5,6 +5,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#pragma once
+
 #include "Timer.h"
 #include <cstdint>
 #include <string>
@@ -32,7 +34,7 @@ public:
 
     void Listen();
     void OnClientConnected(std::span<char, 65535> buffer, const std::string& ip_client);
-    void Receive();
+    int Receive();
     void Pong(uint64_t uuid, uint64_t ping_id);
     void OnClientDisconnected(uint64_t uuid);
     void SendData(uint64_t const& uuid, std::string const& data);

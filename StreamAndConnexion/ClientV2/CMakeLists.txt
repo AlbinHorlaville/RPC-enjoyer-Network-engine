@@ -13,3 +13,15 @@ target_include_directories(ClientV2 PRIVATE ${CMAKE_SOURCE_DIR}/Socket)
 
 target_link_libraries(ClientV2 tools)
 target_include_directories(ClientV2 PRIVATE ${CMAKE_SOURCE_DIR}/tools)
+
+add_library(ClientV2lib Client.cpp)
+target_include_directories(ClientV2lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_link_libraries(ClientV2lib Stream)
+target_include_directories(ClientV2lib PRIVATE ${CMAKE_SOURCE_DIR}/Stream)
+
+target_link_libraries(ClientV2lib Socket)
+target_include_directories(ClientV2lib PRIVATE ${CMAKE_SOURCE_DIR}/Socket)
+
+target_link_libraries(ClientV2lib tools)
+target_include_directories(ClientV2lib PRIVATE ${CMAKE_SOURCE_DIR}/tools)

@@ -10,3 +10,14 @@ target_include_directories(ServerV2 PRIVATE ${CMAKE_SOURCE_DIR}/Stream)
 target_include_directories(ServerV2 PRIVATE ${CMAKE_SOURCE_DIR}/tools)
 target_include_directories(ServerV2 PRIVATE ${CMAKE_SOURCE_DIR}/Socket)
 
+add_library(ServerV2lib Server.cpp)
+target_include_directories(ServerV2lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_link_libraries(ServerV2lib Stream)
+target_include_directories(ServerV2lib PRIVATE ${CMAKE_SOURCE_DIR}/Stream)
+
+target_link_libraries(ServerV2lib Socket)
+target_include_directories(ServerV2lib PRIVATE ${CMAKE_SOURCE_DIR}/Socket)
+
+target_link_libraries(ServerV2lib tools)
+target_include_directories(ServerV2lib PRIVATE ${CMAKE_SOURCE_DIR}/tools)
