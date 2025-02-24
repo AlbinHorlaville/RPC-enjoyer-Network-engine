@@ -12,6 +12,7 @@
 #include <span>
 #include <vector>
 #include <bitset>
+#include <chrono>
 
 // First bit == Who created the stream.
 // 1 == Server, 0 == Client
