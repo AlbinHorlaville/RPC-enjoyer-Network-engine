@@ -10,6 +10,7 @@
 #include <array>
 #include <span>
 #include <chrono>
+#include <algorithm>
 
 #define PORT_SEND 5556
 #define PORT_RECEIVE 5555
