@@ -13,6 +13,9 @@
 #define PORT_SEND 5556
 #define PORT_RECEIVE 5555
 
+constexpr uint64_t SERVER_STREAM_MASK = static_cast<uint64_t>(1) << 63;
+constexpr uint64_t RELIABILITY_MASK = static_cast<uint64_t>(1) << 62;
+
 uint64_t generateRandomUint64() {
     std::random_device rd;
     std::mt19937_64 gen(rd());  // 64-bit Mersenne Twister engine
@@ -21,6 +24,19 @@ uint64_t generateRandomUint64() {
 
     // Generate and return a random uint64_t
     return dis(gen);
+}
+
+int getRandomInt(int min, int max) {
+    // Use a high-resolution clock as a seed source for better randomness
+    unsigned seed = std::chrono::steady_clock::now().time_since_epoch().count();
+
+    // Initialize the random engine with a different seed every time
+    std::mt19937 rng(seed);
+
+    // Define the range [1, 5]
+    std::uniform_int_distribution<int> dist(min, max);
+
+    return dist(rng);
 }
 
 uint16_t generateRandomPort() {
@@ -41,7 +57,11 @@ void getIPandPort(std::string* ip, uint16_t* port) {
     }
 }
 
-Server::Server() : connectionSockfd(0), msg_id(0){}
+Server::Server() : connectionSockfd(0), msg_id(0), last_stream_id(0), last_rcv_id(0) {
+    for (int i = 0; i < received_packages.size(); i++) {
+        received_packages[i] = true;
+    }
+}
 
 Server::~Server() {}
 
@@ -87,13 +107,20 @@ void Server::OnClientConnected(std::span<char, 65535> buffer, const std::string&
         const uint64_t uuid = clients.size();
 
         ClientInfo client{ip, newPort, newToken, uuid, nullptr, new Timer()};
-        auto* stream = new Stream(1, false, ip, newPort+1, newPort);
+        auto* stream = new Stream(1, true, ip, newPort+1, newPort);
         client.stream = stream;
         clients[uuid] = client;
 
         std::cout << "Client port : " << client.port << std::endl;
 
         Connect_ACK connect_ack{sizeof(connect_ack), newPort, uuid, newToken};
+        // Set stream ID
+        connect_ack.stream_id = last_stream_id++;
+        // Flag creator
+        connect_ack.stream_id |= SERVER_STREAM_MASK;
+        // Set the Reliability
+        connect_ack.stream_id |= RELIABILITY_MASK;
+        // Send package
         Socket::sendTo(connectionSockfd, ip, PORT_SEND, connect_ack.serialize());
     // RECONNECT
     } else if (buffer[0] == RECONNECT) {
@@ -101,7 +128,7 @@ void Server::OnClientConnected(std::span<char, 65535> buffer, const std::string&
         reconnect.deserialize(buffer);
         if(clients.contains(reconnect.uuid) && reconnect.token == clients[reconnect.uuid].token) {
             ClientInfo* client = &clients[reconnect.uuid];
-            auto* stream = new Stream(1, false, ip, client->port+1, client->port);
+            auto* stream = new Stream(1, true, ip, client->port+1, client->port);
             client->stream = stream;
             client->timer = new Timer();
             Connect_ACK connect_ack{sizeof(connect_ack), client->port, reconnect.uuid, reconnect.token};
@@ -135,7 +162,7 @@ int Server::Receive() {
             pongClient.timer->stop();
             auto function = [this, ping] () { OnClientDisconnected(ping.uuid);};
             pongClient.timer->setTimeout(function,1000);
-            std::cout << "Pong : " << ping.ping_id << std::endl;
+            std::cout << "PongPing : " << ping.ping_id << std::endl;
             Pong(ping.uuid, ping.ping_id);
             res = PING;
             break;
@@ -150,14 +177,35 @@ int Server::Receive() {
             std::cout << "Message receive from Client : " << data.data << std::endl;
             std::cout << "Sending back ACK..." << std::endl;
 
+            if (getRandomInt(1, 5) == 1) {
+                res = DATA;
+                break;
+            }
+
             // Send DATA_ACK
             struct Data_ACK data_ack{};
             data_ack.uuid = data.uuid;
-            data_ack.last_rcv_id = data.msg_id;
-            data_ack.last_rcv = 0;
+            data_ack.msg_id = data.msg_id;
+
+            if (clients[data.uuid].stream->isReliable()) {
+                // Reliability bitset
+                if (data.msg_id > last_rcv_id) {
+                    int diff = static_cast<int>(data.msg_id - last_rcv_id);
+                    int size = static_cast<int>(received_packages.size());
+                    received_packages <<= std::min(diff, size);
+                    received_packages[0] = true;
+                    last_rcv_id = data.msg_id;
+                }else {
+                    received_packages[last_rcv_id - data.msg_id] = true;
+                }
+
+                data_ack.previous_packages = received_packages;
+            }
+
             data_ack.size = sizeof(data_ack);
             bufferSend = data_ack.serialize();
             clients[data.uuid].stream->SendData(bufferSend);
+
             res = DATA;
             break;
         }
@@ -166,8 +214,22 @@ int Server::Receive() {
             // Deserialize Package
             struct Data_ACK ack{};
             ack.deserialize(bufferReceive);
-            std::cout << "DATA_ACK received : " << ack.last_rcv_id << std::endl;
-            // A finir : Faire un suivi des messages envoyer pour que l'ack ait un intérêt.
+            std::cout << "DATA_ACK received : " << ack.msg_id << std::endl;
+
+            // Reliability
+            if (clients[ack.uuid].stream->isReliable()) {
+                if (packages_waiting_ack.contains(ack.msg_id)) {
+                    packages_waiting_ack.erase(ack.msg_id);
+                }
+                for (int i = 0; i < ack.previous_packages.size(); i++) {
+                    if (packages_waiting_ack.contains(ack.msg_id - i)) {
+                        Data package = packages_waiting_ack[ack.msg_id - i];
+                        std::vector<char> data = package.serialize();
+                        clients[ack.uuid].stream->SendData(data);
+                    }
+                }
+            }
+
             res = DATA_ACK;
             break;
         }
@@ -190,6 +252,11 @@ void Server::SendData(uint64_t const& uuid, std::string const& data) {
     package.size = sizeof(package);
     std::vector<char> Data = package.serialize();
     clientStream->SendData(Data);
+
+    if (clients[uuid].stream->isReliable()) {
+        // Add this package, starting him waiting it ack
+        packages_waiting_ack[package.msg_id] = package;
+    }
 }
 
 void Server::Pong(const uint64_t uuid, const uint64_t ping_id) {

@@ -13,10 +13,12 @@ int main(int argc, const char * argv[]) {
 
     client.SendData("Bien le bonjour au serveur !");
 
-    // Receive Send ACK
-    client.ReceiveData();
+    for (int i = 0; i < 10; i++) {
+        client.SendData("Bien le bonjour au serveur !");
+        // Receive Send ACK
+        client.ReceiveData();
+    }
 
-    client.ReceiveData();
 
     cout << "Latence : " << client.GetLatence() << "ms." << endl;
 

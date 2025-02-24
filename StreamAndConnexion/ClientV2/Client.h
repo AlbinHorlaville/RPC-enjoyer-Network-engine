@@ -9,8 +9,16 @@
 
 #include <cstdint>
 #include <functional>
+#include <map>
+#include <bitset>
+#include "FormatPackage.h"
 #include "Timer.h"
 #include "Stream.h"
+
+struct history {
+    Data data;
+    bool acknowledged;
+};
 
 class Client {
 private:
@@ -28,6 +36,16 @@ private:
     std::string version;
     uint16_t latence;
     bool connected;
+    // RELIABILITY
+    std::map<uint64_t, Data> packages_waiting_ack; // A stocke les paquets dont il n'a pas encore reçu l'ack
+    std::bitset<30> received_packages; // B stocke la listes des status (reçu / non reçu) des 30 derniers paquets.
+    // A envoie un paquet Data à B.
+    // A stocke dans une map les paquets en attente d'ack associés à leur id.
+    // B stocke la listes des status (reçu / non reçu) des 30 derniers paquets.
+    // Quand A envoie un paquet DATA, il le stock dans la map.
+    // Quand B reçoit le paquet, il met à jour son bitset puis l'envoie dans l'ack à A.
+    // Quand A reçoit un ack, il supprime de la map les paquets qui ont été acquitté et renvoie ceux qui ne le sont pas.
+    uint64_t last_rcv_id;
 public:
     Client();
     void ConnectTo(const std::string& ip);

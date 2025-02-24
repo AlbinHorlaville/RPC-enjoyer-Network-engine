@@ -11,6 +11,9 @@
 #define PORT_SEND 5555
 #define PORT_RECEIVE 5556
 
+constexpr uint64_t RELIABILITY_MASK = static_cast<uint64_t>(1) << 62;
+
+
 Client::Client() {
   connected = false;
   ping_id = 0;
@@ -25,6 +28,10 @@ Client::Client() {
   timerPing = std::make_unique<Timer>();
   timerReconnect = std::make_unique<Timer>();
   timerStopReconnect = std::make_unique<Timer>();
+  for (int i = 0; i < received_packages.size(); i++) {
+    received_packages[i] = true;
+  }
+  last_rcv_id = 0;
 }
 
 void Client::Ping(){
@@ -36,7 +43,7 @@ void Client::Ping(){
   package.size = sizeof(package);
   std::vector<char> Data = package.serialize();
   stream->SendData(Data);
-  std::cout << "Ping " << package.ping_id << std::endl;
+  //std::cout << "Ping " << package.ping_id << std::endl;
 }
 
 void Client::ConnectTo(const std::string& ip){
@@ -69,8 +76,13 @@ void Client::ConnectTo(const std::string& ip){
   uuid = connect_ack.uuid;
   token = connect_ack.token;
 
+  // Get the reliability
+  bool reliability = connect_ack.stream_id & RELIABILITY_MASK;
+
+  std::cout << "Reliability : " << reliability << std::endl;
+
   // Create Stream
-  stream = std::make_unique<Stream>(1, false, ip, connect_ack.port, connect_ack.port+1);
+  stream = std::make_unique<Stream>(connect_ack.stream_id, reliability, ip, connect_ack.port, connect_ack.port+1);
 
   // Start the PING timer
   timerPing->setInterval([this](){Ping();}, 200);
@@ -91,6 +103,11 @@ void Client::SendData(std::string const& data) {
   package.size = sizeof(package);
   std::vector<char> Data = package.serialize();
   stream->SendData(Data);
+
+  if (stream->isReliable()) {
+    // Add this package, starting him waiting it ack
+    packages_waiting_ack[package.msg_id] = package;
+  }
 }
 
 void Client::CloseConnexion() {
@@ -192,7 +209,7 @@ int Client::ReceiveData() {
       // Reset the timer
       timerDisconnect->stop();
       timerDisconnect->setTimeout([this](){OnDisconnect();}, 1000);
-      std::cout << "Pong " << pong.ping_id << std::endl;
+      //std::cout << "Pong " << pong.ping_id << std::endl;
       res =  PING;
       break;
     }
@@ -209,11 +226,27 @@ int Client::ReceiveData() {
       // Send DATA_ACK
       struct Data_ACK data_ack{};
       data_ack.uuid = uuid;
-      data_ack.last_rcv_id = data.msg_id;
-      data_ack.last_rcv = 0;
+      data_ack.msg_id = data.msg_id;
+
+      if (stream->isReliable()) {
+        // Reliability bitset
+        if (data.msg_id > last_rcv_id) {
+          int diff = static_cast<int>(data.msg_id - last_rcv_id);
+          int size = static_cast<int>(received_packages.size());
+          received_packages <<= std::min(diff, size);
+          received_packages[0] = true;
+          last_rcv_id = data.msg_id;
+        }else {
+          received_packages[last_rcv_id - data.msg_id] = true;
+        }
+
+        data_ack.previous_packages = received_packages;
+      }
+
       data_ack.size = sizeof(data_ack);
       bufferSend = data_ack.serialize();
       stream->SendData(bufferSend);
+
       res = DATA;
       break;
     }
@@ -222,8 +255,28 @@ int Client::ReceiveData() {
       // Deserialize Package
       struct Data_ACK ack{};
       ack.deserialize(bufferReceive);
-      std::cout << "DATA_ACK received : " << ack.last_rcv_id << std::endl;
-      // A finir : Faire un suivi des messages envoyer pour que l'ack ait un intérêt.
+      std::cout << "DATA_ACK received : " << ack.msg_id << std::endl;
+
+      std::cout << "BITSET : ";
+      for (int i=0; i < 30; i++) {
+        std::cout << ack.previous_packages[i];
+      }
+      std::cout << std::endl;
+
+      // Reliability
+      if (stream->isReliable()) {
+        if (packages_waiting_ack.contains(ack.msg_id)) {
+          packages_waiting_ack.erase(ack.msg_id);
+        }
+        for (int i = 0; i < ack.previous_packages.size(); i++) {
+          if (packages_waiting_ack.contains(ack.msg_id - i)) {
+            Data package = packages_waiting_ack[ack.msg_id - i];
+            std::vector<char> data = package.serialize();
+            stream->SendData(data);
+          }
+        }
+      }
+
       res = DATA_ACK;
       break;
     }

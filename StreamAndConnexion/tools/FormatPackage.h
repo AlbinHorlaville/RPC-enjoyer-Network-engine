@@ -11,6 +11,12 @@
 #include <cstdint>
 #include <span>
 #include <vector>
+#include <bitset>
+
+// First bit == Who created the stream.
+// 1 == Server, 0 == Client
+// Second bit == Reliability
+// 1 == true, 0 == false
 
 enum PackageType {
   CONNECT,
@@ -35,6 +41,12 @@ inline void serializeString(std::vector<char>& buffer, const std::string& str) {
   buffer.insert(buffer.end(), str.begin(), str.end());
 }
 
+template <size_t N>
+void serializeBitset(std::vector<char>& buffer, const std::bitset<N>& bitset) {
+  std::string str = bitset.to_string(); // Convert to string representation
+  buffer.insert(buffer.end(), str.begin(), str.end()); // Store in buffer
+}
+
 template<typename T>
 void deserializeField(const char*& data, T& value) {
   std::memcpy(&value, data, sizeof(T));
@@ -46,6 +58,12 @@ inline void deserializeString(const char*& data, std::string& str) {
   deserializeField(data, length);
   str.assign(data, length);
   data += length;
+}
+
+template <size_t N>
+void deserializeBitset(const char*& data, std::bitset<N>& bitset) {
+  std::string str(data);
+  bitset = std::bitset<N>(str);
 }
 
 // Header : 1, Client -> Server
@@ -117,6 +135,7 @@ struct Connect_ACK {
   uint16_t port;
   uint64_t uuid;
   uint64_t token;
+  uint64_t stream_id;
 
   std::vector<char> serialize() {
     std::vector<char> buffer;
@@ -125,6 +144,7 @@ struct Connect_ACK {
     serializeField(buffer, this->port);
     serializeField(buffer, this->uuid);
     serializeField(buffer, this->token);
+    serializeField(buffer, this->stream_id);
     return buffer;
   }
 
@@ -134,6 +154,7 @@ struct Connect_ACK {
     deserializeField(data, this->port);
     deserializeField(data, this->uuid);
     deserializeField(data, this->token);
+    deserializeField(data, this->stream_id);
   }
 };
 
@@ -196,8 +217,8 @@ struct Data {
 struct Data_ACK {
   uint16_t size;
   uint64_t uuid;
-  uint64_t last_rcv_id;
-  uint64_t last_rcv; // State of last 30 packets (0 = not received, 1 = received)
+  uint64_t msg_id;
+  std::bitset<30> previous_packages;
   // If stream is reliable, we send back, else we don't
 
   std::vector<char> serialize() {
@@ -205,8 +226,8 @@ struct Data_ACK {
     buffer.push_back(DATA_ACK);
     serializeField(buffer, this->size);
     serializeField(buffer, this->uuid);
-    serializeField(buffer, this->last_rcv_id);
-    serializeField(buffer, this->last_rcv);
+    serializeField(buffer, this->msg_id);
+    serializeBitset(buffer, this->previous_packages);
     return buffer;
   }
 
@@ -214,8 +235,8 @@ struct Data_ACK {
     const char* data = buffer.data()+1;
     deserializeField(data, this->size);
     deserializeField(data, this->uuid);
-    deserializeField(data, this->last_rcv_id);
-    deserializeField(data, this->last_rcv);
+    deserializeField(data, this->msg_id);
+    deserializeBitset(data, this->previous_packages);
   }
 };
 
