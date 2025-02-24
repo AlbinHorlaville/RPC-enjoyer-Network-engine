@@ -7,7 +7,6 @@
 #include "Socket.h"
 #include <array>
 #include <span>
-#include <algorithm>
 
 #define PORT_SEND 5555
 #define PORT_RECEIVE 5556
@@ -234,7 +233,7 @@ int Client::ReceiveData() {
         if (data.msg_id > last_rcv_id) {
           int diff = static_cast<int>(data.msg_id - last_rcv_id);
           int size = static_cast<int>(received_packages.size());
-          received_packages <<= static_cast<size_t>(std::min(diff, size));
+          received_packages <<= diff < size ? diff : size;
           received_packages[0] = true;
           last_rcv_id = data.msg_id;
         }else {

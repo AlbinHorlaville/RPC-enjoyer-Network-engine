@@ -10,7 +10,6 @@
 #include <array>
 #include <span>
 #include <chrono>
-#include <algorithm>
 
 #define PORT_SEND 5556
 #define PORT_RECEIVE 5555
@@ -194,7 +193,7 @@ int Server::Receive() {
                 if (data.msg_id > last_rcv_id) {
                     int diff = static_cast<int>(data.msg_id - last_rcv_id);
                     int size = static_cast<int>(received_packages.size());
-                    received_packages <<= static_cast<size_t>(std::min(diff, size));
+                    received_packages <<= diff < size ? diff : size;
                     received_packages[0] = true;
                     last_rcv_id = data.msg_id;
                 }else {
